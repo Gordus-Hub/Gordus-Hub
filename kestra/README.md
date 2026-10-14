@@ -10,7 +10,7 @@ GitHub is the only authorized platform for this phase. Repository changes are tr
 
 - `flows/gordus_hub.github/`: version-controlled Kestra flow definition(s), retained as source artifacts.
 - `.github/workflows/kestra-static-validation.yml`: static YAML and structure validation.
-- `.github/workflows/kestra-runtime-smoke-test.yml`: starts Kestra temporarily, loads the flow, triggers it, and fails unless execution reaches `SUCCESS`.
+- `.github/workflows/kestra-runtime-smoke-test.yml`: starts the pinned Kestra image temporarily, loads the flow, triggers it through the local API, and fails unless execution reaches `SUCCESS`; Docker logs are retained until the cleanup step.
 
 ## How to operate within GitHub only
 
@@ -20,7 +20,7 @@ GitHub is the only authorized platform for this phase. Repository changes are tr
 4. Merge only after the checks pass and the change has been reviewed.
 5. Implement any new executable repository automation as a GitHub Actions workflow and repository-managed script. Do not assume a Kestra flow YAML runs just because it is present in GitHub.
 
-GitHub-hosted runners are temporary execution environments. The runtime smoke test verifies that Kestra can actually execute the repository flow during CI; it does not leave Kestra running after the job finishes. A permanently available Kestra UI and scheduler would require a persistent deployment, which is outside this GitHub-only setup.
+GitHub-hosted runners are temporary execution environments. The runtime smoke test verifies that Kestra can actually execute the repository flow during CI; it does not leave Kestra running after the job finishes. There is no persistent Kestra UI or always-on scheduler in a GitHub-only design. A permanently available Kestra UI and scheduler would require a persistent deployment, which is outside this GitHub-only setup.
 
 ## Security
 
@@ -28,7 +28,7 @@ GitHub-hosted runners are temporary execution environments. The runtime smoke te
 - Store a GitHub Actions secret only if a later, explicitly reviewed workflow needs it.
 - The current validation workflow requests only `contents: read`.
 - Do not add external deployment, self-hosted runners, or repository-write permissions without a separately reviewed requirement.
-- Keep the workflow restricted to repository validation; it makes no external service calls.
+- The runtime test pulls the pinned official Kestra container image. It does not deploy to an external host or send repository data to a separate service.
 
 ## References
 
