@@ -4,12 +4,13 @@
 
 GitHub is the only authorized platform for this phase. Repository changes are tracked in Git, and executable automation runs through GitHub Actions hosted runners. No VPS, persistent Linux server, self-hosted runner, external Kestra server, or external webhook is part of this setup.
 
-**Important distinction:** the YAML files under `kestra/flows/` are version-controlled flow definitions. GitHub Actions does not execute them as Kestra flows. The workflow in this repository performs static YAML and structure validation only; that is not a Kestra engine deployment, server-side validation, or a successful Kestra flow execution.
+**Runtime model:** the `kestra-runtime-smoke-test.yml` workflow starts a temporary Kestra engine on a GitHub-hosted runner, loads the repository flow definitions, triggers `repository_health_check`, and requires a successful execution. The engine is stopped when the job ends. This proves a real Kestra execution in CI when the workflow passes, but it is not a persistent Kestra server, permanent UI, or continuously running scheduler. The separate static-validation workflow only parses YAML and checks structure.
 
 ## Current repository contents
 
 - `flows/gordus_hub.github/`: version-controlled Kestra flow definition(s), retained as source artifacts.
-- `.github/workflows/kestra-static-validation.yml`: GitHub Actions validation of the flow YAML on relevant pull requests and pushes, with manual dispatch available.
+- `.github/workflows/kestra-static-validation.yml`: static YAML and structure validation.
+- `.github/workflows/kestra-runtime-smoke-test.yml`: starts Kestra temporarily, loads the flow, triggers it, and fails unless execution reaches `SUCCESS`.
 
 ## How to operate within GitHub only
 
@@ -19,7 +20,7 @@ GitHub is the only authorized platform for this phase. Repository changes are tr
 4. Merge only after the checks pass and the change has been reviewed.
 5. Implement any new executable repository automation as a GitHub Actions workflow and repository-managed script. Do not assume a Kestra flow YAML runs just because it is present in GitHub.
 
-GitHub-hosted runners are temporary execution environments. This arrangement supports event-triggered and manually dispatched jobs; it does not provide an always-running Kestra service, persistent Kestra UI, or Kestra scheduler.
+GitHub-hosted runners are temporary execution environments. The runtime smoke test verifies that Kestra can actually execute the repository flow during CI; it does not leave Kestra running after the job finishes. A permanently available Kestra UI and scheduler would require a persistent deployment, which is outside this GitHub-only setup.
 
 ## Security
 
