@@ -10,7 +10,7 @@ GitHub is the only authorized platform for this phase. Repository changes are tr
 
 - `flows/gordus_hub.github/`: version-controlled Kestra flow definition(s), retained as source artifacts.
 - `.github/workflows/kestra-static-validation.yml`: static YAML and structure validation.
-- `.github/workflows/kestra-runtime-smoke-test.yml`: starts the pinned Kestra image temporarily, waits for API readiness, imports the repository YAML through `POST /api/v1/main/flows`, verifies it through the API, triggers an execution, and fails unless the state reaches `SUCCESS`; Docker logs are emitted on failure.
+- `.github/workflows/kestra-runtime-smoke-test.yml`: starts the pinned image `kestra/kestra:v1.3.40-slim`, waits for API readiness, imports the YAML through `POST /api/v1/main/flows`, verifies the flow via API, triggers it, and fails unless the execution state reaches `SUCCESS`.
 
 ## How to operate within GitHub only
 
@@ -28,11 +28,13 @@ GitHub-hosted runners are temporary execution environments. The runtime smoke te
 - Store a GitHub Actions secret only if a later, explicitly reviewed workflow needs it.
 - The current validation workflow requests only `contents: read`.
 - Do not add external deployment, self-hosted runners, or repository-write permissions without a separately reviewed requirement.
-- The runtime test pulls the pinned official Kestra container image. Basic authentication is disabled only inside this throwaway CI instance; its API port is bound to `127.0.0.1`, it is not publicly exposed, and the container is removed at job end. It does not deploy to an external host.
+- The runtime test uses a pinned official Kestra image and keeps Basic Authentication enabled. Every run generates a one-run random password, masks it from logs, and supplies credentials only to the ephemeral API test. The container's API port is bound to `127.0.0.1`, is not publicly exposed, and the container is removed at job end. No long-lived secret is stored in the repository.
 
 ## References
 
 - [GitHub Actions documentation](https://docs.github.com/actions)
 - [Kestra Git version control](https://kestra.io/docs/version-control-cicd/git)
 - [Kestra CI/CD and GitHub Actions](https://kestra.io/docs/version-control-cicd/cicd/github-action)
+- [Kestra API: create flows and trigger executions](https://kestra.io/docs/how-to-guides/api)
+- [Kestra Docker images and pinned tags](https://kestra.io/docs/installation/docker)
 - [Kestra GitHub repository](https://github.com/kestra-io/kestra)
