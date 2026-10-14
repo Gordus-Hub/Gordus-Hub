@@ -1,0 +1,8 @@
+id: repository_health_check
+namespace: gordus_hub.github
+description: Minimal example flow kept under version control; not deployed automatically.
+
+tasks:
+  - id: report_repository_flow
+    type: io.kestra.plugin.core.log.Log
+    message: "Gordus-Hub Kestra flow definition is present in GitHub."
