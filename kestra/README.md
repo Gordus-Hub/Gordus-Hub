@@ -28,7 +28,7 @@ GitHub-hosted runners are temporary execution environments. The runtime smoke te
 - Store a GitHub Actions secret only if a later, explicitly reviewed workflow needs it.
 - The current validation workflow requests only `contents: read`.
 - Do not add external deployment, self-hosted runners, or repository-write permissions without a separately reviewed requirement.
-- The runtime test pulls the pinned official Kestra container image. It does not deploy to an external host or send repository data to a separate service.
+- The runtime test pulls the pinned official Kestra container image. Basic authentication is disabled only inside this throwaway CI instance; its API port is bound to `127.0.0.1`, it is not publicly exposed, and the container is removed at job end. It does not deploy to an external host.
 
 ## References
 
