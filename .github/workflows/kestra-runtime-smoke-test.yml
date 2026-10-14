@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Pull pinned Kestra image
-        run: docker pull kestra/kestra:v1.3.42
+        run: docker pull kestra/kestra:v1.3.40-slim
 
       - name: Start ephemeral Kestra engine
         run: |
@@ -40,7 +40,7 @@ jobs:
           docker run -d --name kestra-smoke \
             -p 127.0.0.1:8080:8080 \
             -e KESTRA_CONFIGURATION=$'kestra:\n  server:\n    basicAuth:\n      enabled: false\n' \
-            kestra/kestra:v1.3.42 server local
+            kestra/kestra:v1.3.40-slim server local
 
       - name: Wait for the Kestra API
         shell: bash
