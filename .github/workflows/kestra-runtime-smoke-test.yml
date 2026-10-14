@@ -65,10 +65,15 @@ jobs:
           fi
           echo "Kestra API is ready."
 
-      - name: Import the repository flow through the Kestra CLI
+      - name: Import the repository flow through the Kestra API
         run: |
           set -euo pipefail
-          docker exec kestra-smoke /app/kestra flow create /flows/gordus_hub.github/repository_health_check.yaml
+          curl --fail --silent --show-error -X POST \
+            -H "Content-Type: application/x-yaml" \
+            --data-binary @kestra/flows/gordus_hub.github/repository_health_check.yaml \
+            http://127.0.0.1:8080/api/v1/main/flows \
+            -o /tmp/kestra-import.json
+          jq -e '.id == "repository_health_check" and .namespace == "gordus_hub.github"' /tmp/kestra-import.json
 
       - name: Verify the flow is loaded
         shell: bash
