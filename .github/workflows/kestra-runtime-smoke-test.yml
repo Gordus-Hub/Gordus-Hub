@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: kestra-runtime-smoke-${{ github.ref }}
+  group: kestra-runtime-smoke-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           api_ready=false
-          for attempt in $(seq 1 60); do
+          for attempt in $(seq 1 36); do
             if ! docker inspect -f '{{.State.Running}}' kestra-smoke 2>/dev/null | grep -qx true; then
               echo "Kestra container exited during startup."
               docker logs kestra-smoke || true
