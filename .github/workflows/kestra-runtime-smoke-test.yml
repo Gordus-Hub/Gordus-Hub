@@ -31,15 +31,25 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Pull pinned Kestra image
-        run: docker pull kestra/kestra:v1.3.40-slim
-
-      - name: Start ephemeral Kestra engine
+      - name: Generate a one-run Kestra test credential
+        shell: bash
         run: |
           set -euo pipefail
+          password="KCI$(openssl rand -hex 24)A9!"
+          echo "::add-mask::$password"
+          printf 'KESTRA_TEST_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
+
+      - name: Pull pinned slim Kestra image
+        run: docker pull kestra/kestra:v1.3.40-slim
+
+      - name: Start ephemeral Kestra engine with temporary Basic Auth
+        shell: bash
+        run: |
+          set -euo pipefail
+          configuration="$(printf 'kestra:\n  server:\n    basicAuth:\n      username: "admin@kestra.io"\n      password: "%s"\n' "$KESTRA_TEST_PASSWORD")"
           docker run -d --name kestra-smoke \
             -p 127.0.0.1:8080:8080 \
-            -e KESTRA_CONFIGURATION=$'kestra:\n  server:\n    basicAuth:\n      enabled: false\n' \
+            -e KESTRA_CONFIGURATION="$configuration" \
             kestra/kestra:v1.3.40-slim server local
 
       - name: Wait for the Kestra API
@@ -70,7 +80,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error -X POST \
+          curl --fail --silent --show-error --user "admin@kestra.io:$KESTRA_TEST_PASSWORD" -X POST \
             -H "Content-Type: application/x-yaml" \
             --data-binary @kestra/flows/gordus_hub.github/repository_health_check.yaml \
             http://127.0.0.1:8080/api/v1/main/flows \
@@ -81,7 +91,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error \
+          curl --fail --silent --show-error --user "admin@kestra.io:$KESTRA_TEST_PASSWORD" \
             http://127.0.0.1:8080/api/v1/main/flows/gordus_hub.github/repository_health_check \
             -o /tmp/kestra-flow.json
           jq -e '.id == "repository_health_check" and .namespace == "gordus_hub.github"' /tmp/kestra-flow.json
@@ -90,7 +100,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          response="$(curl --fail --silent --show-error -X POST \
+          response="$(curl --fail --silent --show-error --user "admin@kestra.io:$KESTRA_TEST_PASSWORD" -X POST \
             http://127.0.0.1:8080/api/v1/main/executions/gordus_hub.github/repository_health_check)"
           echo "$response"
           execution_id="$(printf '%s' "$response" | jq -r '.id // empty')"
@@ -100,7 +110,7 @@ jobs:
           fi
 
           for attempt in $(seq 1 60); do
-            status_json="$(curl --fail --silent --show-error \
+            status_json="$(curl --fail --silent --show-error --user "admin@kestra.io:$KESTRA_TEST_PASSWORD" \
               "http://127.0.0.1:8080/api/v1/main/executions/$execution_id")"
             state="$(printf '%s' "$status_json" | jq -r '.state.current // empty')"
             echo "Execution $execution_id state: $state"
