@@ -54,3 +54,19 @@ These findings are retained here to preserve the audit trail; they are not prese
 **Production or persistent-service certification: not applicable to the GitHub-only architecture and not claimed.**
 
 The record must not be interpreted as proof that Kestra remains running after the workflow completes.
+
+## Post-merge independent read-back reconciliation
+
+**Reconciliation date:** 2026-10-14  
+**Merged main commit at integration:** `44f990c465fd6d81adc1b8b170c735b5dda7213c`  
+**PR status:** [PR #2 merged](https://github.com/Gordus-Hub/Gordus-Hub/pull/2)
+
+A separate read-back through the GitHub repository API compared the tested PR source commit `9ebb850b4bd45302ef79edc598cfd4b8d8119d00` with the merged `main` files. The Git blob SHAs were identical:
+
+- Runtime workflow: `2089581b2692ee7fa42b75752640efe393b68318`
+- Static validation workflow: `3583ec937382972932b8bae291f3c757568de162`
+- Executed flow YAML: `1dbefbb3e80e4f25175463dca881a5ddff6fc00f`
+
+**Independent read-back validation:** PASS. The exact runtime workflow, static validator and flow tested by Actions are the same blobs present in merged `main`.
+
+**Second-party/human review:** NOT PERFORMED. This record claims independent artifact read-back, not an external reviewer or independent certification authority.
