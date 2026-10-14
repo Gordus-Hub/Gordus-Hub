@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           docker run -d --name kestra-smoke \
             -p 127.0.0.1:8080:8080 \
-            -e KESTRA_CONFIGURATION=$'kestra:\n  server:\n    basic-auth:\n      enabled: false\n' \
+            -e KESTRA_CONFIGURATION=$'kestra:\n  server:\n    basicAuth:\n      enabled: false\n' \
             kestra/kestra:v1.3.42 server local
 
       - name: Wait for the Kestra API
