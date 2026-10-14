@@ -39,93 +39,6 @@ jobs:
           set -euo pipefail
           docker run -d --name kestra-smoke \
             -p 127.0.0.1:8080:8080 \
-            -e KESTRA_CONFIGURATION=
-
-      - name: Wait for the Kestra API
-        shell: bash
-        run: |
-          set -euo pipefail
-          api_ready=false
-          for attempt in $(seq 1 36); do
-            if ! docker inspect -f '{{.State.Running}}' kestra-smoke 2>/dev/null | grep -qx true; then
-              echo "Kestra container exited during startup."
-              docker logs kestra-smoke || true
-              exit 1
-            fi
-            if curl --fail --silent --show-error http://127.0.0.1:8080/ >/dev/null; then
-              api_ready=true
-              break
-            fi
-            sleep 5
-          done
-          if [ "$api_ready" != true ]; then
-            echo "Kestra API did not become ready."
-            docker logs kestra-smoke || true
-            exit 1
-          fi
-          echo "Kestra API is ready."
-
-      - name: Import the repository flow through the Kestra API
-        run: |
-          set -euo pipefail
-          curl --fail --silent --show-error -X POST \
-            -H "Content-Type: application/x-yaml" \
-            --data-binary @kestra/flows/gordus_hub.github/repository_health_check.yaml \
-            http://127.0.0.1:8080/api/v1/main/flows \
-            -o /tmp/kestra-import.json
-          jq -e '.id == "repository_health_check" and .namespace == "gordus_hub.github"' /tmp/kestra-import.json
-
-      - name: Verify the flow is loaded
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail --silent --show-error \
-            http://127.0.0.1:8080/api/v1/main/flows/gordus_hub.github/repository_health_check \
-            -o /tmp/kestra-flow.json
-          jq -e '.id == "repository_health_check" and .namespace == "gordus_hub.github"' /tmp/kestra-flow.json
-
-      - name: Trigger the flow and require a successful execution
-        shell: bash
-        run: |
-          set -euo pipefail
-          response="$(curl --fail --silent --show-error -X POST \
-            http://127.0.0.1:8080/api/v1/main/executions/gordus_hub.github/repository_health_check)"
-          echo "$response"
-          execution_id="$(printf '%s' "$response" | jq -r '.id // empty')"
-          if [ -z "$execution_id" ]; then
-            echo "Kestra did not return an execution ID."
-            exit 1
-          fi
-
-          for attempt in $(seq 1 60); do
-            status_json="$(curl --fail --silent --show-error \
-              "http://127.0.0.1:8080/api/v1/main/executions/$execution_id")"
-            state="$(printf '%s' "$status_json" | jq -r '.state.current // empty')"
-            echo "Execution $execution_id state: $state"
-            case "$state" in
-              SUCCESS)
-                jq -e '.state.current == "SUCCESS"' <<<"$status_json"
-                exit 0
-                ;;
-              FAILED|WARNING|KILLING|KILLED|CANCELLED)
-                echo "$status_json"
-                exit 1
-                ;;
-            esac
-            sleep 5
-          done
-          echo "Timed out waiting for Kestra execution $execution_id."
-          exit 1
-
-      - name: Print Kestra logs on failure
-        if: failure()
-        run: docker logs kestra-smoke || true
-
-      - name: Stop ephemeral Kestra engine
-        if: always()
-        run: docker rm -f kestra-smoke || true
-kestra:\n  server:\n    basic-auth:\n      enabled: false\n' \
-            -v "${{ github.workspace }}/kestra/flows:/flows:ro" \
             kestra/kestra:v1.3.42 server local
 
       - name: Wait for the Kestra API
@@ -139,7 +52,7 @@ kestra:\n  server:\n    basic-auth:\n      enabled: false\n' \
               docker logs kestra-smoke || true
               exit 1
             fi
-            if curl --fail --silent --show-error http://127.0.0.1:8080/ >/dev/null; then
+            if curl --location --fail --silent --show-error http://127.0.0.1:8080/ >/dev/null; then
               api_ready=true
               break
             fi
@@ -152,12 +65,18 @@ kestra:\n  server:\n    basic-auth:\n      enabled: false\n' \
           fi
           echo "Kestra API is ready."
 
-      - name: Import the repository flow through the Kestra CLI
+      - name: Import repository flow through the Kestra YAML API
+        shell: bash
         run: |
           set -euo pipefail
-          docker exec kestra-smoke /app/kestra flow create /flows/gordus_hub.github/repository_health_check.yaml
+          curl --fail --silent --show-error -X POST \
+            -H "Content-Type: application/x-yaml" \
+            --data-binary @kestra/flows/gordus_hub.github/repository_health_check.yaml \
+            http://127.0.0.1:8080/api/v1/main/flows \
+            -o /tmp/kestra-import.json
+          jq -e '.id == "repository_health_check" and .namespace == "gordus_hub.github"' /tmp/kestra-import.json
 
-      - name: Verify the flow is loaded
+      - name: Verify flow is loaded
         shell: bash
         run: |
           set -euo pipefail
@@ -166,7 +85,7 @@ kestra:\n  server:\n    basic-auth:\n      enabled: false\n' \
             -o /tmp/kestra-flow.json
           jq -e '.id == "repository_health_check" and .namespace == "gordus_hub.github"' /tmp/kestra-flow.json
 
-      - name: Trigger the flow and require a successful execution
+      - name: Trigger the flow and require successful execution
         shell: bash
         run: |
           set -euo pipefail
