@@ -10,7 +10,7 @@ GitHub is the only authorized platform for this phase. Repository changes are tr
 
 - `flows/gordus_hub.github/`: version-controlled Kestra flow definition(s), retained as source artifacts.
 - `.github/workflows/kestra-static-validation.yml`: static YAML and structure validation.
-- `.github/workflows/kestra-runtime-smoke-test.yml`: starts the pinned Kestra image temporarily, loads the flow, triggers it through the local API, and fails unless execution reaches `SUCCESS`; Docker logs are retained until the cleanup step.
+- `.github/workflows/kestra-runtime-smoke-test.yml`: starts the pinned Kestra image temporarily, imports the repository flow with the Kestra CLI after API readiness, triggers it through the local API, and fails unless execution reaches `SUCCESS`; Docker logs are retained until the cleanup step.
 
 ## How to operate within GitHub only
 
