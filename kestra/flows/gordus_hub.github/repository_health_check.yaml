@@ -1,6 +1,6 @@
 id: repository_health_check
 namespace: gordus_hub.github
-description: Minimal example flow kept under version control; not deployed automatically.
+description: Minimal repository health-check flow. CI loads and executes it in an ephemeral Kestra instance.
 
 tasks:
   - id: report_repository_flow

@@ -55,6 +55,7 @@ jobs:
           required = ("id", "namespace", "tasks")
           failed = False
           for path in files:
+              file_failed = False
               try:
                   data = yaml.safe_load(path.read_text(encoding="utf-8"))
               except Exception as exc:
@@ -71,21 +72,40 @@ jobs:
               if missing:
                   print(f"ERROR: {path}: missing required field(s): {', '.join(missing)}")
                   failed = True
-                  continue
+                  file_failed = True
 
-              if not isinstance(data["id"], str) or not data["id"].strip():
+              if "id" in data and (not isinstance(data["id"], str) or not data["id"].strip()):
                   print(f"ERROR: {path}: id must be a non-empty string")
                   failed = True
-              if not isinstance(data["namespace"], str) or not data["namespace"].strip():
+                  file_failed = True
+              if "namespace" in data and (not isinstance(data["namespace"], str) or not data["namespace"].strip()):
                   print(f"ERROR: {path}: namespace must be a non-empty string")
                   failed = True
-              if not isinstance(data["tasks"], list) or not data["tasks"]:
-                  print(f"ERROR: {path}: tasks must be a non-empty list")
-                  failed = True
+                  file_failed = True
+              if "tasks" in data:
+                  tasks = data["tasks"]
+                  if not isinstance(tasks, list) or not tasks:
+                      print(f"ERROR: {path}: tasks must be a non-empty list")
+                      failed = True
+                      file_failed = True
+                  else:
+                      for index, task in enumerate(tasks):
+                          if not isinstance(task, dict):
+                              print(f"ERROR: {path}: task #{index + 1} must be a mapping")
+                              failed = True
+                              file_failed = True
+                              continue
+                          for field in ("id", "type"):
+                              value = task.get(field)
+                              if not isinstance(value, str) or not value.strip():
+                                  print(f"ERROR: {path}: task #{index + 1} requires a non-empty string '{field}'")
+                                  failed = True
+                                  file_failed = True
 
-              print(f"{'FAIL' if failed else 'OK'}: {path}")
+              print(f"{'FAIL' if file_failed else 'OK'}: {path}")
 
           if failed:
               sys.exit(1)
           print(f"Validated {len(files)} Kestra flow file(s) structurally.")
+          print("Note: this is static validation; it does not run a Kestra engine or execute flows.")
           PY
