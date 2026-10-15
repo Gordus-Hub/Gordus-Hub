@@ -64,7 +64,7 @@ def main() -> int:
     errors: list[str] = []
     pending_gates: list[dict[str, str]] = []
     pinned_requirements: dict[str, dict[str, str]] = {}
-    evidence_files = ["ai/components.json"]
+    evidence_files = ["ai/components.json", "ai/acquisition.json"]
 
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -80,6 +80,85 @@ def main() -> int:
         errors.append("model_weight_downloads_in_ci must be false")
     if manifest.get("policy", {}).get("model_execution_authorized") is not False:
         errors.append("model_execution_authorized must be false")
+
+    acquisition_path = root / "ai" / "acquisition.json"
+    try:
+        acquisition = json.loads(acquisition_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        errors.append(f"unable to read acquisition protocol: {exc}")
+        acquisition = {}
+
+    if acquisition.get("schema_version") != 1:
+        errors.append("unsupported acquisition protocol schema_version")
+    if acquisition.get("state") != "BLOCKED_BEFORE_DOWNLOAD":
+        errors.append("acquisition must remain blocked until resource and persistence gates are resolved")
+    acquisition_policy = acquisition.get("policy")
+    if not isinstance(acquisition_policy, dict):
+        errors.append("acquisition policy must be an object")
+        acquisition_policy = {}
+    for required_true in ("fail_closed", "download_all_before_install", "install_in_declared_order",
+                          "use_only_github_hosted_runners"):
+        if acquisition_policy.get(required_true) is not True:
+            errors.append(f"acquisition policy {required_true} must be true")
+    if acquisition_policy.get("self_hosted_runner_allowed") is not False:
+        errors.append("self-hosted runners must remain prohibited")
+    if acquisition_policy.get("persistent_storage_target") is not None:
+        errors.append("persistent storage target must not be assumed without explicit approval")
+
+    expected_order = [
+        "inspect-ai",
+        "madlad400-3b-mt",
+        "qwen3-coder-30b-a3b-instruct",
+        "cltk",
+        "heidelberg-ancient-language-models",
+    ]
+    chronology = acquisition.get("chronological_order")
+    if not isinstance(chronology, dict):
+        errors.append("chronological_order must be an object")
+        chronology = {}
+    for phase in ("download", "install"):
+        if chronology.get(phase) != expected_order:
+            errors.append(f"{phase} order must match the registered five-component order")
+
+    resource_gate = acquisition.get("resource_gate")
+    if not isinstance(resource_gate, dict):
+        errors.append("resource_gate must be an object")
+        resource_gate = {}
+    minimum_disk = resource_gate.get("minimum_free_disk_bytes")
+    recommended_ram = resource_gate.get("recommended_ram_gib_for_full_checkpoint_load_tests")
+    if not isinstance(minimum_disk, int) or minimum_disk < 110_000_000_000:
+        errors.append("minimum free disk must be at least 110,000,000,000 bytes")
+    if not isinstance(recommended_ram, int) or recommended_ram < 128:
+        errors.append("full-checkpoint load test RAM recommendation must be at least 128 GiB")
+    if resource_gate.get("observed_standard_runner_ssd_gib") != 14:
+        errors.append("standard runner storage baseline must remain explicit")
+
+    source_pins = acquisition.get("source_pins")
+    if not isinstance(source_pins, dict):
+        errors.append("source_pins must be an object")
+        source_pins = {}
+    component_by_id = {
+        component.get("id"): component for component in manifest.get("components", [])
+        if isinstance(component, dict) and isinstance(component.get("id"), str)
+    }
+    pinned_comparisons = [
+        ("madlad400-3b-mt", "madlad400_3b_mt"),
+        ("qwen3-coder-30b-a3b-instruct", "qwen3_coder_30b_a3b_instruct"),
+        ("heidelberg-ancient-language-models", "heidelberg_ancient_language_models"),
+    ]
+    for component_id, pin_key in pinned_comparisons:
+        source_pin = source_pins.get(pin_key)
+        component = component_by_id.get(component_id)
+        if not isinstance(source_pin, dict) or not isinstance(component, dict):
+            errors.append(f"acquisition pin missing for {component_id}")
+            continue
+        revision = source_pin.get("revision")
+        if component.get("revision") != revision or not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
+            errors.append(f"acquisition and component manifest revisions must match for {component_id}")
+
+    for gate in acquisition.get("required_gates", []):
+        if isinstance(gate, str):
+            pending_gates.append({"component": "GLOBAL", "gate": gate.upper()})
 
     components = manifest.get("components")
     if not isinstance(components, list):
