@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "state": "BLOCKED_BEFORE_DOWNLOAD",
+  "policy": {
+    "fail_closed": true,
+    "download_all_before_install": true,
+    "install_in_declared_order": true,
+    "use_only_github_hosted_runners": true,
+    "self_hosted_runner_allowed": false,
+    "upload_model_weights_as_actions_artifacts": false,
+    "persistent_storage_target": null,
+    "model_execution_authorized": false
+  },
+  "chronological_order": {
+    "download": [
+      "inspect-ai",
+      "madlad400-3b-mt",
+      "qwen3-coder-30b-a3b-instruct",
+      "cltk",
+      "heidelberg-ancient-language-models"
+    ],
+    "install": [
+      "inspect-ai",
+      "madlad400-3b-mt",
+      "qwen3-coder-30b-a3b-instruct",
+      "cltk",
+      "heidelberg-ancient-language-models"
+    ]
+  },
+  "source_pins": {
+    "madlad400_3b_mt": {
+      "repository": "google/madlad400-3b-mt",
+      "revision": "fa184c675da0b5c9e1c8694fccd4e12e2d422094",
+      "expected_primary_weight_bytes": 11761587872,
+      "expected_primary_weight_sha256": "66ff5f8fcaf92291da486fdfbd4d5233cec90e1359348a56e3172c978b3a76d4"
+    },
+    "qwen3_coder_30b_a3b_instruct": {
+      "repository": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "revision": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
+      "approximate_full_snapshot_gib": 61.1,
+      "weight_shards": 16
+    },
+    "heidelberg_ancient_language_models": {
+      "repository": "Heidelberg-NLP/ancient-language-models",
+      "revision": "26b34a912bdbfd45089cb2e8b5b39b38a538c54c",
+      "code_license_declared_in_pyproject": "MIT",
+      "external_models_and_treebanks": "LICENSE_REVIEW_REQUIRED"
+    }
+  },
+  "resource_gate": {
+    "observed_standard_runner_ssd_gib": 14,
+    "minimum_free_disk_bytes_before_any_weight_download": 110000000000,
+    "recommended_ram_gib_for_full_checkpoint_load_tests": 128,
+    "reason": "MADLAD full safetensors file is 11.76 GB; Qwen complete snapshot is about 61.1 GB; neither is persistently available from a disposable Actions workspace."
+  },
+  "required_gates": [
+    "configure_and_confirm_GitHub_hosted_larger_runner",
+    "confirm_runner_has_required_free_disk_and_RAM",
+    "commit_reviewed_hash_locked_transitive_dependency_lockfiles",
+    "select_and_pin_CPU_or_GPU_backend",
+    "review_each_Heidelberg_linked_model_and_treebank_license",
+    "configure_approved_persistent_model_storage_or_accept_ephemeral_test_only_execution",
+    "implement_real_component_adapters_and_model_load_tests"
+  ]
+}

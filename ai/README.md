@@ -34,3 +34,8 @@ The AI component foundation flow is a traceable control-plane smoke test. In the
 ## Wiring milestone
 
 See [`ai/WIRING.md`](WIRING.md) and [`ai/wiring.json`](wiring.json) for the governed route contracts. CI tests request validation, route order, fail-closed gates, hash-only evidence, and stop-on-first-failure behavior using test-only fake adapters. **No real model adapters are registered by default**; MADLAD/Qwen inference remains blocked until immutable revisions, licenses, runtime/backend and weight artifacts are approved. CLTK and Inspect AI also need component-specific adapters and task fixtures before they are active in this router.
+
+
+## Acquisition readiness
+
+See [`ACQUISITION_READINESS.md`](ACQUISITION_READINESS.md) for immutable source revisions, the required download-all-then-install-all chronology, and the current resource/persistence blockers. Model-weight downloads remain disabled until that readiness gate passes.

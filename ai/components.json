@@ -35,15 +35,20 @@
       "package": null,
       "package_version": null,
       "requirements_file": "ai/requirements/model-runtime.txt",
-      "revision": null,
+      "revision": "fa184c675da0b5c9e1c8694fccd4e12e2d422094",
+      "expected_full_weight_file": {
+        "path": "model.safetensors",
+        "size_bytes": 11761587872,
+        "sha256": "66ff5f8fcaf92291da486fdfbd4d5233cec90e1359348a56e3172c978b3a76d4"
+      },
       "license": {
         "value": "Apache-2.0",
         "status": "DECLARED_NOT_INDEPENDENTLY_AUDITED"
       },
       "installation_enabled": false,
       "smoke_test": null,
-      "gate": "PIN_IMMUTABLE_MODEL_REVISION_AND_REVIEW_LICENSE_STORAGE_AND_RUNTIME",
-      "scope": "translation candidate; package smoke test does not load model weights"
+      "gate": "REVIEW_LICENSE_RESOURCE_BUDGET_BACKEND_AND_PERSISTENT_STORAGE",
+      "scope": "translation candidate; full safetensors weight download is 11.76 GB; snapshot/installation remains gated"
     },
     {
       "id": "qwen3-coder-30b-a3b-instruct",
@@ -53,15 +58,17 @@
       "package": null,
       "package_version": null,
       "requirements_file": "ai/requirements/model-runtime.txt",
-      "revision": null,
+      "revision": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
+      "expected_snapshot_size_label": "61.1 GB",
+      "expected_weight_shards": 16,
       "license": {
         "value": "Apache-2.0",
         "status": "DECLARED_NOT_INDEPENDENTLY_AUDITED"
       },
       "installation_enabled": false,
       "smoke_test": null,
-      "gate": "PIN_IMMUTABLE_MODEL_REVISION_AND_REVIEW_LICENSE_STORAGE_AND_RUNTIME",
-      "scope": "coding candidate; package smoke test does not load model weights"
+      "gate": "REVIEW_LICENSE_RESOURCE_BUDGET_BACKEND_AND_PERSISTENT_STORAGE",
+      "scope": "coding candidate; full snapshot is about 61.1 GB; package smoke test does not load model weights"
     },
     {
       "id": "cltk",
@@ -86,13 +93,14 @@
       "source": "https://github.com/Heidelberg-NLP/ancient-language-models",
       "revision": "26b34a912bdbfd45089cb2e8b5b39b38a538c54c",
       "license": {
-        "value": null,
-        "status": "REVIEW_REQUIRED_NO_REPOSITORY_LICENSE_DECLARED"
+        "value": "MIT",
+        "status": "DECLARED_IN_PYPROJECT_EXTERNAL_ASSETS_UNREVIEWED"
       },
+      "python_requires": "==3.12.*",
       "installation_enabled": false,
       "smoke_test": null,
-      "gate": "REVIEW_LICENSES_OF_CODE_MODELS_DATASETS_AND_CORPORA_BEFORE_ACQUISITION",
-      "scope": "research source only; not an installable universal translator"
+      "gate": "REVIEW_LICENSES_OF_LINKED_MODELS_DATASETS_AND_CORPORA_BEFORE_ACQUISITION",
+      "scope": "research code declares MIT in pyproject.toml; separately hosted pretrained models and treebanks are not bundled and require individual review"
     }
   ]
 }

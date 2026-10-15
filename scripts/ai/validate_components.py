@@ -166,8 +166,11 @@ def main() -> int:
                 errors.append(f"{component_id}: research repository must remain gated")
             if not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
                 errors.append(f"{component_id}: research source must have an immutable 40-char SHA")
-            if license_info.get("status") != "REVIEW_REQUIRED_NO_REPOSITORY_LICENSE_DECLARED":
-                errors.append(f"{component_id}: repository license review status must remain explicit")
+            if license_info.get("status") not in {
+                "REVIEW_REQUIRED_NO_REPOSITORY_LICENSE_DECLARED",
+                "DECLARED_IN_PYPROJECT_EXTERNAL_ASSETS_UNREVIEWED",
+            }:
+                errors.append(f"{component_id}: repository/external-asset license review status must remain explicit")
             pending_gates.append(
                 {"component": component_id, "gate": "PER_ARTIFACT_LICENSE_REVIEW_REQUIRED"}
             )

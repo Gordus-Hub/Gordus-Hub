@@ -35,3 +35,8 @@ The route contract is stored in `ai/wiring.json` and documented in `ai/WIRING.md
 ## Failure behavior
 
 A missing dependency pin, invalid component ID, unbounded model revision, failed import, failed package consistency check, or failed flow execution must fail its own check. Model acquisition remains disabled by default. No credentials, external services, Docker socket, or model weights are added by this foundation.
+
+
+## Acquisition readiness audit
+
+The next phase is recorded in [`ai/ACQUISITION_READINESS.md`](../ai/ACQUISITION_READINESS.md) and `ai/acquisition.json`. Full model weights have not been downloaded. Immutable revisions have now been pinned, while execution remains blocked by the standard runner's disk limit, the lack of a persistent model-storage target, unhashed transitive dependency lockfiles, and separate licenses for Heidelberg-linked model/data artifacts. A successful package smoke test does not clear these gates.
