@@ -12,7 +12,7 @@ if [[ ! -x "$ANDROID_CLI" ]]; then
   exit 1
 fi
 
-# Run interactive license prompts non-interactively without masking the command's exit code.
+# Feed SDK licenses without hiding the installer command's exit code.
 run_with_yes() {
   set +o pipefail
   yes | "$@"
@@ -21,7 +21,7 @@ run_with_yes() {
   return "$command_status"
 }
 
-# Install released Android 16/API 36 packages from the stable channel.
+# Android 16 / API 36 from the stable channel.
 run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install \
   platform-tools \
   platforms/android-36 \
@@ -29,10 +29,8 @@ run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install \
   emulator \
   system-images/android-36/google_apis/x86_64
 
-# Android 17/API 37 is currently a preview; use --canary to include preview packages.
-# Preview package identifiers can include the API minor-version suffix.
-# Android 17 is documented as API 37; the SDK repository publishes its preview
-# platform under platforms/android-37.0 (the API identity remains 37).
+# Android 17 / API 37 is a preview and may be listed as API 37.0.
+# --canary includes Canary, Beta and Stable SDK packages.
 run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install --canary \
   platforms/android-37.0 \
   build-tools/37.0.0
@@ -58,29 +56,13 @@ for api in 36 37; do
       echo "ERROR: Android 17 platform source.properties is missing." >&2
       exit 1
     }
-    grep -Eq '^AndroidVersion.ApiLevel=37
-for version in 36.0.0 37.0.0; do
-  test -x "$ANDROID_HOME/build-tools/$version/aapt" || {
-    echo "ERROR: Android Build-Tools $version is missing or incomplete." >&2
-    exit 1
-  }
-done
-
-"$ANDROID_HOME/platform-tools/adb" version
-"$ANDROID_HOME/emulator/emulator" -version
-"$ANDROID_CLI" --sdk="$ANDROID_HOME" --no-metrics -V
-
-printf '\nAndroid SDK installation verified.\n'
-printf 'Debian release: '
-. /etc/os-release
-printf '%s (%s)\n' "$PRETTY_NAME" "${VERSION_CODENAME:-unknown}"
-printf 'Installed Android platform APIs: 36 and 37.0 (Android 17 preview). API level 37 verified.\n'
- "$platform_dir/source.properties" || {
+    grep -Fqx "AndroidVersion.ApiLevel=37" "$platform_dir/source.properties" || {
       echo "ERROR: Android 17 platform metadata does not identify API level 37." >&2
       exit 1
     }
   fi
 done
+
 for version in 36.0.0 37.0.0; do
   test -x "$ANDROID_HOME/build-tools/$version/aapt" || {
     echo "ERROR: Android Build-Tools $version is missing or incomplete." >&2
