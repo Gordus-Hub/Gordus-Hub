@@ -83,7 +83,6 @@ def main() -> int:
                   "inspect_ai_suite_execution_authorized"):
         if policy.get(field) is not False:
             errors.append(f"manifest policy.{field} must be false")
-            errors.append(f"manifest policy.{field} must be false")
 
     components = manifest.get("components")
     if not isinstance(components, list):
