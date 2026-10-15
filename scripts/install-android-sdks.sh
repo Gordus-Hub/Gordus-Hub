@@ -29,7 +29,7 @@ run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install \
   emulator \
   system-images/android-36/google_apis/x86_64
 
-# Android 17/API 37 is currently a preview; use the official Beta channel.
+# Android 17/API 37 is currently a preview; use --canary to include preview packages.
 # Preview package identifiers can include the API minor-version suffix.
 # Android 17 is documented as API 37; the SDK repository publishes its preview
 # platform under platforms/android-37.0 (the API identity remains 37).
