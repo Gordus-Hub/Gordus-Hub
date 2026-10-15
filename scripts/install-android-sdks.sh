@@ -6,32 +6,34 @@ export ANDROID_HOME
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
 
-SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-if [[ ! -x "$SDKMANAGER" ]]; then
-  echo "ERROR: sdkmanager not found at $SDKMANAGER" >&2
+ANDROID_CLI="$ANDROID_HOME/cmdline-tools/latest/bin/android"
+if [[ ! -x "$ANDROID_CLI" ]]; then
+  echo "ERROR: Android CLI not found at $ANDROID_CLI" >&2
   exit 1
 fi
 
-# Android 17 (API 37) is currently distributed through the preview channel.
-# --channel=3 makes preview packages eligible while keeping package IDs explicit.
-set +o pipefail
-yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --channel=3 --licenses >/dev/null
-license_status=${PIPESTATUS[1]}
-set -o pipefail
-if (( license_status != 0 )); then
-  echo "ERROR: Android SDK license acceptance failed." >&2
-  exit "$license_status"
-fi
+# Run interactive license prompts non-interactively without masking the command's exit code.
+run_with_yes() {
+  set +o pipefail
+  yes | "$@"
+  local command_status=${PIPESTATUS[1]}
+  set -o pipefail
+  return "$command_status"
+}
 
-"$SDKMANAGER" --sdk_root="$ANDROID_HOME" --channel=3 --install \
-  "platform-tools" \
-  "platforms;android-36" \
-  "platforms;android-37" \
-  "build-tools;36.0.0" \
-  "build-tools;37.0.0" \
-  "emulator" \
-  "system-images;android-36;google_apis;x86_64" \
-  "system-images;android-37;google_apis;x86_64"
+# Install released Android 16/API 36 packages from the stable channel.
+run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install \
+  platform-tools \
+  platforms/android-36 \
+  build-tools/36.0.0 \
+  emulator \
+  system-images/android-36/google_apis/x86_64
+
+# Android 17/API 37 is currently a preview; use the official Beta channel.
+run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install --beta \
+  platforms/android-37 \
+  build-tools/37.0.0 \
+  system-images/android-37/google_apis/x86_64
 
 for api in 36 37; do
   test -s "$ANDROID_HOME/platforms/android-$api/android.jar" || {
@@ -53,9 +55,10 @@ done
 
 "$ANDROID_HOME/platform-tools/adb" version
 "$ANDROID_HOME/emulator/emulator" -version
+"$ANDROID_CLI" --sdk="$ANDROID_HOME" --no-metrics -V
 
 printf '\nAndroid SDK installation verified.\n'
 printf 'Debian release: '
 . /etc/os-release
 printf '%s (%s)\n' "$PRETTY_NAME" "${VERSION_CODENAME:-unknown}"
-printf 'Installed Android platform APIs: 36 and 37\n'
+printf 'Installed Android platform APIs: 36 and 37 (preview)\n'
