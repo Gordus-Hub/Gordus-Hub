@@ -43,3 +43,12 @@ A clean CI run may certify the registry/routes, static contracts, safe blocked s
 ## 6. Rollback and approval
 
 Rollback is a Git revert of the cleanup commit/PR; main is not changed by this branch. Review the diff and CI evidence before merging. Separate explicit approval is required before installing the three packages and approved data assets in the persistent runtime.
+
+
+## 7. Operational authorization addendum — 2026-10-15
+
+This append-only addendum updates the operational state without rewriting the original historical audit disposition. The user has explicitly authorized installation of the three pinned Python libraries and hash-locked transitive dependencies into the dedicated, versioned virtual environment under `/var/lib/gordus-ai`. System Python modification, Argos language packs, CLTK corpora/resources, model weights, and Inspect AI suite execution remain outside this authorization.
+
+The committed lock was reviewed for **pinned installability only**: CPython 3.13/Linux x86_64 target, direct-pin parity, SHA-256 hash enforcement, successful `pip check`, exact-version/import checks, CPU-only PyTorch dependency profile, and runtime contract tests in [CI run 38756256593](https://github.com/Gordus-Hub/Gordus-Hub/actions/runs/38756256593). Reviewed lock: `ai/requirements/locks/runtime-py313-linux-x86_64.txt`; GitHub blob SHA-1: `cd20bb6945cd71b34fcbdd57b404ea7c61b7bcb7`. This review is not task-quality certification, independent installation verification, licensing certification, translation/linguistic quality validation, or evaluation certification.
+
+**Execution result for this session:** `PERSISTENT_INSTALLATION_NOT_PERFORMED`. Device inventory reports no online Desktop Commander target and the connected DigitalOcean account reports no droplets. The actual Debian 13/Python 3.13 target and explicitly mounted, writable `/var/lib/gordus-ai` could not be inspected or changed. No successful persistent installation is claimed. The installer remains fail-closed unless its per-run approval and target prerequisites are met. Language/resource/suite registries remain closed and certification remains `NOT_GRANTED`.
