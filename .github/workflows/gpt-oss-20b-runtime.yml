@@ -1,0 +1,164 @@
+name: GPT-OSS 20B full model runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_model_len:
+        description: "Maximum model context length for this run"
+        required: true
+        default: "4096"
+      keep_runtime_minutes:
+        description: "Keep the inference server alive during this job (1-300 minutes)"
+        required: true
+        default: "10"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gpt-oss-20b-gpu-runtime
+  cancel-in-progress: false
+
+jobs:
+  download-and-run-full-model:
+    # Requires a configured runner with a supported GPU, >=20 GB VRAM,
+    # Docker, NVIDIA Container Toolkit, Python 3, and >=40 GB free disk.
+    # The public GitHub-hosted T4 (16 GB, compute capability 7.5) is not
+    # accepted by this fail-closed hardware gate.
+    runs-on: [self-hosted, linux, x64, gpu, gpt-oss-20b]
+    timeout-minutes: 360
+    env:
+      MODEL_ID: openai/gpt-oss-20b
+      SERVED_MODEL_NAME: gpt-oss-20b
+      CONTAINER_NAME: gpt-oss-20b-runtime
+      MODEL_MAX_LEN: ${{ inputs.max_model_len }}
+      KEEP_MINUTES: ${{ inputs.keep_runtime_minutes }}
+
+    steps:
+      - name: Validate inputs and runner prerequisites
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$MODEL_MAX_LEN" =~ ^[0-9]+$ ]] && (( MODEL_MAX_LEN >= 1024 && MODEL_MAX_LEN <= 131072 ))
+          [[ "$KEEP_MINUTES" =~ ^[0-9]+$ ]] && (( KEEP_MINUTES >= 1 && KEEP_MINUTES <= 300 ))
+          command -v docker
+          docker info >/dev/null
+          command -v nvidia-smi
+          command -v python3
+          nvidia-smi
+          python3 - <<'PY'
+          import subprocess
+          raw = subprocess.check_output([
+              "nvidia-smi", "--query-gpu=name,compute_cap,memory.total",
+              "--format=csv,noheader,nounits"
+          ], text=True)
+          gpus = []
+          for line in raw.splitlines():
+              if not line.strip():
+                  continue
+              name, cap, memory = [part.strip() for part in line.split(",", 2)]
+              major, minor = cap.split(".", 1)
+              compute = int(major) + int(minor) / 10
+              gpus.append((name, compute, int(memory)))
+          eligible = [g for g in gpus if g[1] >= 9.0 and g[2] >= 20000]
+          if not eligible:
+              raise SystemExit(
+                  "FAIL-CLOSED: GPT-OSS 20B runtime requires a supported Hopper-or-later "
+                  "GPU with >=20,000 MiB VRAM. Detected GPUs: " + repr(gpus)
+              )
+          print("Eligible GPU(s):", eligible)
+          PY
+          free_kb=$(df -Pk "$HOME" | awk 'NR==2 {print $4}')
+          (( free_kb >= 40 * 1024 * 1024 )) || {
+            echo "FAIL: at least 40 GiB free storage is required under HOME" >&2
+            exit 1
+          }
+
+      - name: Pull pinned inference runtime
+        run: docker pull vllm/vllm-openai:latest
+
+      - name: Download complete official model snapshot
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m venv "$RUNNER_TEMP/hf-download-venv"
+          "$RUNNER_TEMP/hf-download-venv/bin/pip" install --disable-pip-version-check --upgrade huggingface_hub
+          mkdir -p "$HOME/.cache/huggingface"
+          "$RUNNER_TEMP/hf-download-venv/bin/hf" download "$MODEL_ID" \
+            --cache-dir "$HOME/.cache/huggingface" \
+            --max-workers 4
+          test -d "$HOME/.cache/huggingface/hub"
+          echo "PASS: Hugging Face download command completed for $MODEL_ID"
+          du -sh "$HOME/.cache/huggingface"
+
+      - name: Start the full GPT-OSS 20B model
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+          docker run -d --name "$CONTAINER_NAME" --gpus all --ipc=host \
+            -p 127.0.0.1:8000:8000 \
+            -e HF_HUB_ENABLE_HF_TRANSFER=1 \
+            -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+            vllm/vllm-openai:latest \
+            --model "$MODEL_ID" \
+            --served-model-name "$SERVED_MODEL_NAME" \
+            --tensor-parallel-size 1 \
+            --max-model-len "$MODEL_MAX_LEN" \
+            --host 0.0.0.0 --port 8000
+          deadline=$((SECONDS + 3300))
+          until curl --fail --silent http://127.0.0.1:8000/v1/models >/tmp/gpt-oss-20b-models.json; do
+            if ! docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null | grep -qx true; then
+              docker logs "$CONTAINER_NAME" || true
+              exit 1
+            fi
+            if (( SECONDS >= deadline )); then
+              docker logs "$CONTAINER_NAME" || true
+              echo "FAIL: timed out while loading full model weights" >&2
+              exit 1
+            fi
+            sleep 15
+          done
+          cat /tmp/gpt-oss-20b-models.json
+          python3 - <<'PY'
+          import json
+          with open("/tmp/gpt-oss-20b-models.json") as f:
+              data = json.load(f)
+          ids = [m.get("id") for m in data.get("data", [])]
+          if "gpt-oss-20b" not in ids:
+              raise SystemExit(f"FAIL: expected model missing; reported models={ids}")
+          print("PASS: full model is loaded and served as gpt-oss-20b")
+          PY
+
+      - name: Run a real inference smoke test
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          curl --fail --silent --show-error http://127.0.0.1:8000/v1/chat/completions \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"gpt-oss-20b","messages":[{"role":"user","content":"Reply with exactly: GPT-OSS-20B-INFERENCE-OK"}],"max_tokens":64,"temperature":0}' \
+            -o /tmp/gpt-oss-20b-response.json
+          python3 - <<'PY'
+          import json
+          with open("/tmp/gpt-oss-20b-response.json") as f:
+              data = json.load(f)
+          choices = data.get("choices") or []
+          if not choices:
+              raise SystemExit(f"FAIL: no completion returned: {data}")
+          text = choices[0].get("message", {}).get("content", "")
+          if not text.strip():
+              raise SystemExit("FAIL: inference returned empty content")
+          print("PASS: real inference returned non-empty output")
+          print("Response:", text[:500])
+          PY
+
+      - name: Keep runtime alive for the selected test window
+        shell: bash
+        run: sleep "$((KEEP_MINUTES * 60))"
+
+      - name: Always stop the temporary test service
+        if: always()
+        shell: bash
+        run: |
+          docker logs "$CONTAINER_NAME" 2>/dev/null | tail -n 150 || true
+          docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
