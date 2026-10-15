@@ -1,0 +1,21 @@
+id: ai_component_foundation
+namespace: gordus_hub.github
+description: >
+  Governance-bound preflight record for the five AI components. This flow is
+  deliberately non-installing: GitHub Actions performs package and Debian checks;
+  model weights and model inference remain gated.
+tasks:
+  - id: declare_installation_boundary
+    type: io.kestra.plugin.core.log.Log
+    message: >
+      AI_COMPONENT_FOUNDATION=PREPARED;
+      PACKAGE_SMOKE_TESTS=GITHUB_ACTIONS;
+      MODEL_WEIGHTS=NOT_DOWNLOADED;
+      MODEL_INFERENCE=NOT_AUTHORIZED;
+      CERTIFICATION=NOT_GRANTED.
+  - id: declare_required_gates
+    type: io.kestra.plugin.core.log.Log
+    message: >
+      Required gates: immutable model revision, per-artifact license review,
+      resource budget, backend selection, independent evaluation, and rollback
+      evidence. This control-plane smoke test does not attest those gates as passed.

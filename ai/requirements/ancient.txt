@@ -1,0 +1,2 @@
+# CLTK's current 2.5.x line requires Python 3.13 or newer.
+cltk==2.5.1

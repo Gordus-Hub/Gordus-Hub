@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "project": "Gordus-Hub/Gordus-Hub",
+  "state": "FOUNDATION_CANDIDATE_NOT_CERTIFIED",
+  "policy": {
+    "installation_mode": "isolated-venvs",
+    "model_weight_downloads_in_ci": false,
+    "model_execution_authorized": false,
+    "fail_closed": true,
+    "evidence_required": true,
+    "mutable_model_revision_allowed": false
+  },
+  "components": [
+    {
+      "id": "inspect-ai",
+      "kind": "python-package",
+      "priority": 1,
+      "source": "https://github.com/UKGovernmentBEIS/inspect_ai",
+      "package": "inspect-ai",
+      "package_version": "0.3.280",
+      "requirements_file": "ai/requirements/evaluation.txt",
+      "license": {
+        "value": "MIT",
+        "status": "DECLARED"
+      },
+      "installation_enabled": true,
+      "smoke_test": "import inspect_ai",
+      "scope": "evaluation framework only; not a certification authority"
+    },
+    {
+      "id": "madlad400-3b-mt",
+      "kind": "huggingface-model",
+      "priority": 1,
+      "source": "https://huggingface.co/google/madlad400-3b-mt",
+      "package": null,
+      "package_version": null,
+      "requirements_file": "ai/requirements/model-runtime.txt",
+      "revision": null,
+      "license": {
+        "value": "Apache-2.0",
+        "status": "DECLARED_NOT_INDEPENDENTLY_AUDITED"
+      },
+      "installation_enabled": false,
+      "smoke_test": null,
+      "gate": "PIN_IMMUTABLE_MODEL_REVISION_AND_REVIEW_LICENSE_STORAGE_AND_RUNTIME",
+      "scope": "translation candidate; package smoke test does not load model weights"
+    },
+    {
+      "id": "qwen3-coder-30b-a3b-instruct",
+      "kind": "huggingface-model",
+      "priority": 1,
+      "source": "https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "package": null,
+      "package_version": null,
+      "requirements_file": "ai/requirements/model-runtime.txt",
+      "revision": null,
+      "license": {
+        "value": "Apache-2.0",
+        "status": "DECLARED_NOT_INDEPENDENTLY_AUDITED"
+      },
+      "installation_enabled": false,
+      "smoke_test": null,
+      "gate": "PIN_IMMUTABLE_MODEL_REVISION_AND_REVIEW_LICENSE_STORAGE_AND_RUNTIME",
+      "scope": "coding candidate; package smoke test does not load model weights"
+    },
+    {
+      "id": "cltk",
+      "kind": "python-package",
+      "priority": 2,
+      "source": "https://github.com/cltk/cltk",
+      "package": "cltk",
+      "package_version": "2.5.1",
+      "requirements_file": "ai/requirements/ancient.txt",
+      "license": {
+        "value": "MIT",
+        "status": "DECLARED"
+      },
+      "installation_enabled": true,
+      "smoke_test": "import cltk",
+      "scope": "general premodern-language NLP library; no language corpora downloaded in CI"
+    },
+    {
+      "id": "heidelberg-ancient-language-models",
+      "kind": "research-repository",
+      "priority": 2,
+      "source": "https://github.com/Heidelberg-NLP/ancient-language-models",
+      "revision": "26b34a912bdbfd45089cb2e8b5b39b38a538c54c",
+      "license": {
+        "value": null,
+        "status": "REVIEW_REQUIRED_NO_REPOSITORY_LICENSE_DECLARED"
+      },
+      "installation_enabled": false,
+      "smoke_test": null,
+      "gate": "REVIEW_LICENSES_OF_CODE_MODELS_DATASETS_AND_CORPORA_BEFORE_ACQUISITION",
+      "scope": "research source only; not an installable universal translator"
+    }
+  ]
+}

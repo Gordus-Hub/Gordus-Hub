@@ -1,0 +1,164 @@
+name: AI component foundation validation
+
+on:
+  pull_request:
+    paths:
+      - "ai/**"
+      - "scripts/ai/**"
+      - "kestra/AI_COMPONENT_FOUNDATION.md"
+      - "kestra/flows/**/*.yaml"
+      - "kestra/flows/**/*.yml"
+      - ".github/workflows/ai-component-foundation.yml"
+      - ".github/workflows/kestra-runtime-smoke-test.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "ai/**"
+      - "scripts/ai/**"
+      - "kestra/AI_COMPONENT_FOUNDATION.md"
+      - "kestra/flows/**/*.yaml"
+      - "kestra/flows/**/*.yml"
+      - ".github/workflows/ai-component-foundation.yml"
+      - ".github/workflows/kestra-runtime-smoke-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-component-foundation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  manifest-and-debian-preflight:
+    name: Validate registry and Debian 13 foundation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13 for manifest validation
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Create evidence directory and validate the registry
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "$RUNNER_TEMP/gordus-ai-evidence"
+          python scripts/ai/validate_components.py --repo-root . \
+            --report "$RUNNER_TEMP/gordus-ai-evidence/manifest-preflight.json"
+          bash -n scripts/ai/preflight.sh
+          python -c 'from pathlib import Path; compile(Path("scripts/ai/validate_components.py").read_text(encoding="utf-8"), "scripts/ai/validate_components.py", "exec")'
+          sha256sum ai/components.json ai/requirements/*.txt \
+            > "$RUNNER_TEMP/gordus-ai-evidence/source-sha256.txt"
+          printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/gordus-ai-evidence/git-sha.txt"
+          python --version > "$RUNNER_TEMP/gordus-ai-evidence/host-python.txt"
+
+      - name: Build the AI-specific Debian 13 image
+        run: docker build --pull --file ai/runtime/Dockerfile --tag gordus-ai-debian13:ci .
+
+      - name: Run preflight inside Debian 13 without downloading model weights
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker run --rm gordus-ai-debian13:ci bash -lc '
+            set -Eeuo pipefail
+            . /etc/os-release
+            test "$ID" = "debian"
+            test "$VERSION_ID" = "13"
+            test "$VERSION_CODENAME" = "trixie"
+            bash scripts/ai/preflight.sh /opt/gordus-ai
+          ' | tee "$RUNNER_TEMP/gordus-ai-evidence/debian13-preflight.json"
+
+      - name: Upload manifest and Debian preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-foundation-preflight-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gordus-ai-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
+  python-package-smoke-tests:
+    name: Install pinned package profiles and record resolution
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: |
+            ai/requirements/evaluation.txt
+            ai/requirements/model-runtime.txt
+            ai/requirements/ancient.txt
+
+      - name: Prepare evidence directories
+        run: mkdir -p "$RUNNER_TEMP/gordus-ai-evidence"
+
+      - name: Install and smoke-test Inspect AI profile
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          venv="$RUNNER_TEMP/venv-evaluation"
+          python -m venv "$venv"
+          "$venv/bin/python" -m pip install --disable-pip-version-check \
+            --no-input -r ai/requirements/evaluation.txt
+          "$venv/bin/python" -c 'import inspect_ai, yaml; print("Inspect AI and PyYAML imports: PASS")'
+          "$venv/bin/inspect" --version
+          "$venv/bin/python" -m pip check
+          "$venv/bin/python" -m pip freeze \
+            > "$RUNNER_TEMP/gordus-ai-evidence/evaluation-pip-freeze.txt"
+
+      - name: Install and smoke-test model runtime libraries only
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          venv="$RUNNER_TEMP/venv-model-runtime"
+          python -m venv "$venv"
+          "$venv/bin/python" -m pip install --disable-pip-version-check \
+            --no-input -r ai/requirements/model-runtime.txt
+          "$venv/bin/python" -c 'import transformers, sentencepiece, safetensors; print("transformers=" + transformers.__version__); print("sentencepiece=" + sentencepiece.__version__); print("safetensors=" + safetensors.__version__)'
+          "$venv/bin/python" -m pip check
+          "$venv/bin/python" -m pip freeze \
+            > "$RUNNER_TEMP/gordus-ai-evidence/model-runtime-pip-freeze.txt"
+
+      - name: Install and smoke-test CLTK profile
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          venv="$RUNNER_TEMP/venv-ancient"
+          python -m venv "$venv"
+          "$venv/bin/python" -m pip install --disable-pip-version-check \
+            --no-input -r ai/requirements/ancient.txt
+          "$venv/bin/python" -c 'import cltk; print("CLTK import: PASS")'
+          "$venv/bin/python" -m pip check
+          "$venv/bin/python" -m pip freeze \
+            > "$RUNNER_TEMP/gordus-ai-evidence/ancient-pip-freeze.txt"
+
+      - name: Record final scope boundary
+        if: always()
+        shell: bash
+        run: |
+          printf '%s\n' \
+            'MODEL_WEIGHTS_DOWNLOADED=false' \
+            'MODEL_INFERENCE_TESTED=false' \
+            'CERTIFICATION=NOT_GRANTED' \
+            'TRANSITIVE_LOCKFILES=FOLLOW_UP_GATE' \
+            > "$RUNNER_TEMP/gordus-ai-evidence/execution-boundary.txt"
+
+      - name: Upload package and preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-component-foundation-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gordus-ai-evidence/
+          if-no-files-found: warn
+          retention-days: 14
