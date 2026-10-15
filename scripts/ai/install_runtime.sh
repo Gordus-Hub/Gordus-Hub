@@ -75,6 +75,8 @@ FINAL="$DATA_ROOT/venvs/runtime-$RELEASE_SHA"
 REPORT_DIR="$DATA_ROOT/evaluations"
 REPORT="$REPORT_DIR/runtime-install-$RELEASE_SHA.json"
 FREEZE="$REPORT_DIR/runtime-freeze-$RELEASE_SHA.txt"
+CURRENT_NEW="$DATA_ROOT/venvs/.current-new-${BASHPID}"
+RESTORE_LINK="$DATA_ROOT/venvs/.current-restore-${BASHPID}"
 
 [[ -d "$DATA_ROOT" && ! -L "$DATA_ROOT" ]] ||
   deny 46 "PERSISTENT_DATA_ROOT_MISSING_OR_SYMLINK"
@@ -120,7 +122,7 @@ mkdir -p "$DATA_ROOT/venvs" "$REPORT_DIR"
 cp "$PREFLIGHT_TMP" "$REPORT_DIR/preflight-$RELEASE_SHA.json"
 rm -f "$PREFLIGHT_TMP"
 
-STAGING="$DATA_ROOT/venvs/.runtime-$RELEASE_SHA.staging-$$"
+STAGING="$DATA_ROOT/venvs/.runtime-$RELEASE_SHA.staging-${BASHPID}"
 [[ ! -e "$STAGING" && ! -L "$STAGING" ]] || deny 56 "STAGING_RUNTIME_ALREADY_EXISTS_REFUSING_OVERWRITE"
 mkdir "$STAGING"
 
@@ -129,23 +131,42 @@ FINALIZED=0
 on_exit() {
   status=$?
   trap - EXIT
+  if [[ "$status" -ne 0 && -L "$CURRENT_NEW" ]]; then
+    rm -f -- "$CURRENT_NEW" || true
+  fi
+  if [[ "$status" -ne 0 && -L "$RESTORE_LINK" ]]; then
+    rm -f -- "$RESTORE_LINK" || true
+  fi
   if [[ "$status" -ne 0 && "$SWITCHED" -ne 1 && -n "${STAGING:-}" && -d "$STAGING" ]]; then
-    rm -rf -- "$STAGING"
-    printf 'CLEANUP=FAILED_STAGING_REMOVED\n' >&2
+    if rm -rf -- "$STAGING"; then
+      printf 'CLEANUP=FAILED_STAGING_REMOVED\n' >&2
+    else
+      printf 'WARNING=FAILED_STAGING_CLEANUP_REQUIRED:%s\n' "$STAGING" >&2
+    fi
   fi
   if [[ "$status" -ne 0 && "$SWITCHED" -ne 1 && "$FINALIZED" -eq 1 && -d "$FINAL" ]]; then
-    rm -rf -- "$FINAL"
-    printf 'CLEANUP=UNACTIVATED_RELEASE_REMOVED\n' >&2
+    if rm -rf -- "$FINAL"; then
+      printf 'CLEANUP=UNACTIVATED_RELEASE_REMOVED\n' >&2
+    else
+      printf 'WARNING=UNACTIVATED_RELEASE_CLEANUP_REQUIRED:%s\n' "$FINAL" >&2
+    fi
   fi
   if [[ "$status" -ne 0 && "$SWITCHED" -eq 1 ]]; then
     if [[ -n "$PREVIOUS_TARGET" ]]; then
-      restore="$DATA_ROOT/venvs/.current-restore-$$"
-      ln -s "$PREVIOUS_TARGET" "$restore"
-      mv -Tf "$restore" "$CURRENT"
-      printf 'ROLLBACK=RESTORED_PREVIOUS_RUNTIME:%s\n' "$PREVIOUS_TARGET" >&2
+      if ln -s "$PREVIOUS_TARGET" "$RESTORE_LINK" && mv -Tf "$RESTORE_LINK" "$CURRENT"; then
+        printf 'ROLLBACK=RESTORED_PREVIOUS_RUNTIME:%s\n' "$PREVIOUS_TARGET" >&2
+      else
+        rm -f -- "$RESTORE_LINK" || true
+        printf 'CRITICAL=ROLLBACK_FAILED_PREVIOUS_RUNTIME_REQUIRES_OPERATOR_INTERVENTION:%s\n' "$PREVIOUS_TARGET" >&2
+        status=70
+      fi
     else
-      rm -f "$CURRENT"
-      printf 'ROLLBACK=REMOVED_FAILED_INITIAL_ACTIVATION\n' >&2
+      if rm -f -- "$CURRENT"; then
+        printf 'ROLLBACK=REMOVED_FAILED_INITIAL_ACTIVATION\n' >&2
+      else
+        printf 'CRITICAL=ROLLBACK_FAILED_ACTIVE_POINTER_REQUIRES_OPERATOR_INTERVENTION\n' >&2
+        status=70
+      fi
     fi
   fi
   if [[ "$status" -ne 0 ]]; then
@@ -205,11 +226,11 @@ PY
 # Finalize a versioned directory, then atomically switch the current pointer.
 mv "$STAGING" "$FINAL"
 FINALIZED=1
-ln -s "$FINAL" "$DATA_ROOT/venvs/.current-new-$"
+ln -s "$FINAL" "$CURRENT_NEW"
 # Mark rollback active before the pointer mutation, so a signal or failed rename
 # still takes the restoration path.
 SWITCHED=1
-mv -Tf "$DATA_ROOT/venvs/.current-new-$" "$CURRENT"
+mv -Tf "$CURRENT_NEW" "$CURRENT"
 FINALIZED=0
 
 set +e
