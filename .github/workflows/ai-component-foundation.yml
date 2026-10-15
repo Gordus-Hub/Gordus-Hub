@@ -267,3 +267,207 @@ jobs:
           path: ${{ runner.temp }}/gordus-ai-runtime-evidence/
           if-no-files-found: warn
           retention-days: 14
+
+  materialize-library-wheelhouse:
+    name: Materialize persistent wheelhouse for the three Python libraries
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'refactor/three-library-wiring-2026-10-15' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    env:
+      GORDUS_AI_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+      GORDUS_AI_RELEASE_TAG: gordus-ai-python313-linux-x86_64-${{ github.event.pull_request.head.sha }}
+      GORDUS_AI_LOCK: ai/requirements/locks/runtime-py313-linux-x86_64.txt
+    steps:
+      - name: Check out the exact PR head commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # pinned v4 tag
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Set up CPython 3.13
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # pinned v5 tag
+        with:
+          python-version: "3.13"
+
+      - name: Validate locked profile and download exact binary wheels
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git rev-parse HEAD)" = "$GORDUS_AI_SOURCE_SHA"
+          test -s "$GORDUS_AI_LOCK"
+          grep -Eq -- '--hash=sha256:[0-9a-fA-F]{64}' "$GORDUS_AI_LOCK"
+          if grep -Eiq '(^|[[:space:]])(nvidia-[^=[:space:]]*|cuda-[^=[:space:]]*|triton)(==|[<=>]|[[:space:]])' "$GORDUS_AI_LOCK"; then
+            echo "Unexpected GPU runtime package in the CPU-only lock" >&2
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/gordus-ai-wheelhouse" "$RUNNER_TEMP/gordus-ai-dist"
+          echo "GORDUS_AI_WHEELHOUSE=$RUNNER_TEMP/gordus-ai-wheelhouse" >> "$GITHUB_ENV"
+          echo "GORDUS_AI_DIST=$RUNNER_TEMP/gordus-ai-dist" >> "$GITHUB_ENV"
+          echo "GORDUS_AI_LOCK_SHA256=$(sha256sum "$GORDUS_AI_LOCK" | awk '{print $1}')" >> "$GITHUB_ENV"
+          python -m pip download --disable-pip-version-check --no-cache-dir --require-hashes --only-binary=:all: --dest "$RUNNER_TEMP/gordus-ai-wheelhouse" -r "$GORDUS_AI_LOCK"
+          test "$(find "$RUNNER_TEMP/gordus-ai-wheelhouse" -maxdepth 1 -type f -name '*.whl' | wc -l)" -gt 0
+          if find "$RUNNER_TEMP/gordus-ai-wheelhouse" -maxdepth 1 -type f ! -name '*.whl' | grep -q .; then
+            echo "Unexpected non-wheel artifact in wheelhouse" >&2
+            exit 1
+          fi
+
+      - name: Verify a complete offline installation from the wheelhouse
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          VENV="$RUNNER_TEMP/gordus-ai-offline-verification"
+          python -m venv "$VENV"
+          "$VENV/bin/python" -m pip install --disable-pip-version-check --no-cache-dir --no-index --find-links "$GORDUS_AI_WHEELHOUSE" --require-hashes -r "$GORDUS_AI_LOCK"
+          "$VENV/bin/python" -m pip check
+          "$VENV/bin/python" - <<'PY'
+          from importlib.metadata import distributions, version
+          from argostranslate import translate
+          from cltk import NLP
+          import inspect_ai, torch
+          expected = {
+              "argostranslate": "1.11.0",
+              "cltk": "2.5.1",
+              "inspect-ai": "0.3.280",
+              "PyYAML": "6.0.2",
+              "torch": "2.14.1+cpu",
+          }
+          for name, wanted in expected.items():
+              actual = version(name)
+              assert actual == wanted, f"{name}: expected {wanted}, found {actual}"
+          assert callable(translate.get_installed_languages)
+          assert callable(NLP)
+          assert torch.version.cuda is None, f"Expected CPU-only PyTorch, got {torch.version.cuda}"
+          installed = {d.metadata["Name"].lower().replace("_", "-") for d in distributions() if d.metadata.get("Name")}
+          unexpected = sorted(n for n in installed if n.startswith(("nvidia-", "cuda-")) or n == "triton")
+          assert not unexpected, f"Unexpected GPU runtime packages: {unexpected}"
+          print("Exact versions, imports, CPU-only dependency profile: PASS")
+          PY
+          "$VENV/bin/inspect" --version
+          PYTHONPATH="ai/runtime" "$VENV/bin/python" -m unittest discover -s ai/runtime/tests -v
+          "$VENV/bin/python" -m pip freeze | sort > "$GORDUS_AI_DIST/pip-freeze.txt"
+
+      - name: Build wheel manifest, notices, SBOM, checksums, and archive
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          BUNDLE="$GORDUS_AI_DIST/gordus-ai-library-bundle"
+          mkdir -p "$BUNDLE/wheelhouse"
+          cp "$GORDUS_AI_WHEELHOUSE"/*.whl "$BUNDLE/wheelhouse/"
+          cp "$GORDUS_AI_LOCK" "$BUNDLE/runtime-py313-linux-x86_64.txt"
+          cp "$GORDUS_AI_DIST/pip-freeze.txt" "$BUNDLE/pip-freeze.txt"
+          export BUNDLE GORDUS_AI_SOURCE_SHA GORDUS_AI_RELEASE_TAG GORDUS_AI_LOCK_SHA256
+          python - <<'PY'
+          import hashlib, json, os, re, zipfile, uuid
+          from email.parser import Parser
+          from pathlib import Path
+          from datetime import datetime, timezone
+          root = Path(os.environ["BUNDLE"])
+          records, components, notices = [], [], []
+          for wheel in sorted((root / "wheelhouse").glob("*.whl")):
+              data = wheel.read_bytes()
+              digest = hashlib.sha256(data).hexdigest()
+              with zipfile.ZipFile(wheel) as z:
+                  entries = [n for n in z.namelist() if n.endswith(".dist-info/METADATA")]
+                  if len(entries) != 1:
+                      raise SystemExit(f"Expected one wheel METADATA: {wheel.name}")
+                  meta = Parser().parsestr(z.read(entries[0]).decode("utf-8", "replace"))
+              name, version = meta.get("Name"), meta.get("Version")
+              if not name or not version:
+                  raise SystemExit(f"Missing distribution identity: {wheel.name}")
+              license_value = meta.get("License-Expression") or meta.get("License") or "NOT_DECLARED_IN_METADATA"
+              records.append({"filename": wheel.name, "name": name, "version": version, "size_bytes": len(data), "sha256": digest, "license_metadata": license_value})
+              components.append({
+                  "type": "library", "name": name, "version": version,
+                  "purl": "pkg:pypi/" + re.sub(r"[-_.]+", "-", name).lower() + "@" + version,
+                  "hashes": [{"alg": "SHA-256", "content": digest}],
+                  "licenses": [{"expression": license_value}] if license_value != "NOT_DECLARED_IN_METADATA" else [],
+              })
+              notices.append(f"{name} {version}\n  License metadata: {license_value}\n  Wheel SHA-256: {digest}\n  License files, where supplied, remain byte-for-byte inside the wheel archive.")
+          versions = {r["name"].lower().replace("_", "-"): r["version"] for r in records}
+          expected = {"argostranslate": "1.11.0", "cltk": "2.5.1", "inspect-ai": "0.3.280"}
+          for name, version in expected.items():
+              if versions.get(name) != version:
+                  raise SystemExit(f"Direct version mismatch: {name}={versions.get(name)}, expected {version}")
+          manifest = {
+              "schema_version": 1, "artifact_kind": "reusable-python-binary-wheelhouse",
+              "release_tag": os.environ["GORDUS_AI_RELEASE_TAG"],
+              "source_commit": os.environ["GORDUS_AI_SOURCE_SHA"],
+              "python": "3.13", "platform": "linux-x86_64",
+              "lock_file": "runtime-py313-linux-x86_64.txt",
+              "lock_sha256": os.environ["GORDUS_AI_LOCK_SHA256"],
+              "network_free_install_verified": True, "pip_check": "PASS",
+              "task_quality_certification": "NOT_GRANTED",
+              "language_data_or_model_assets_downloaded": False,
+              "direct_libraries": expected, "wheel_count": len(records),
+              "total_wheel_bytes": sum(x["size_bytes"] for x in records), "wheels": records,
+          }
+          (root / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          (root / "THIRD_PARTY_NOTICES.txt").write_text(
+              "Hash-locked binary distributions. License metadata below is transcribed from each wheel's METADATA; the wheel files are bundled unmodified and retain any license files shipped within them. Review terms for your own use and redistribution.\n\n" + "\n\n".join(notices) + "\n",
+              encoding="utf-8")
+          bom = {
+              "bomFormat": "CycloneDX", "specVersion": "1.5", "version": 1,
+              "serialNumber": "urn:uuid:" + str(uuid.uuid5(uuid.NAMESPACE_URL, os.environ["GORDUS_AI_SOURCE_SHA"] + ":gordus-ai-wheelhouse")),
+              "metadata": {
+                  "timestamp": datetime.now(timezone.utc).isoformat(),
+                  "component": {
+                      "type": "application", "name": "Gordus-Hub three-library Python wheelhouse",
+                      "version": os.environ["GORDUS_AI_SOURCE_SHA"][:12],
+                      "purl": "pkg:generic/gordus-ai-library-wheelhouse@" + os.environ["GORDUS_AI_SOURCE_SHA"][:12],
+                      "hashes": [{"alg": "SHA-256", "content": os.environ["GORDUS_AI_LOCK_SHA256"]}],
+                  },
+              },
+              "components": components,
+          }
+          (root / "sbom.cdx.json").write_text(json.dumps(bom, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          (root / "INSTALL.md").write_text(
+              "# Offline package installation\n\nCPython 3.13 / Linux x86_64 only. From this directory, create a new virtual environment and install only from the bundled wheelhouse:\n\n"
+              "    python3.13 -m venv .venv-gordus-ai\n"
+              "    . .venv-gordus-ai/bin/activate\n"
+              "    python -m pip install --no-index --find-links wheelhouse --require-hashes -r runtime-py313-linux-x86_64.txt\n"
+              "    python -m pip check\n\n"
+              "This installs Python packages only. Argos language packs, CLTK corpora/resources, Inspect AI suites, and model weights are not included. Task-quality certification is separate.\n",
+              encoding="utf-8")
+          PY
+          cp "$BUNDLE/manifest.json" "$GORDUS_AI_DIST/ai-libraries-py313-linux-x86_64.manifest.json"
+          cp "$BUNDLE/sbom.cdx.json" "$GORDUS_AI_DIST/ai-libraries-py313-linux-x86_64.sbom.cdx.json"
+          cp "$BUNDLE/THIRD_PARTY_NOTICES.txt" "$GORDUS_AI_DIST/ai-libraries-py313-linux-x86_64.THIRD_PARTY_NOTICES.txt"
+          tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner -cf - -C "$GORDUS_AI_DIST" gordus-ai-library-bundle | gzip -n > "$GORDUS_AI_DIST/ai-libraries-py313-linux-x86_64.tar.gz"
+          (
+            cd "$GORDUS_AI_DIST"
+            sha256sum ai-libraries-py313-linux-x86_64.tar.gz ai-libraries-py313-linux-x86_64.manifest.json ai-libraries-py313-linux-x86_64.sbom.cdx.json ai-libraries-py313-linux-x86_64.THIRD_PARTY_NOTICES.txt > ai-libraries-py313-linux-x86_64.SHA256SUMS
+          )
+          SIZE="$(stat -c '%s' "$GORDUS_AI_DIST/ai-libraries-py313-linux-x86_64.tar.gz")"
+          if (( SIZE >= 1800000000 )); then
+            echo "Archive >=1.8GB; refusing to approach GitHub's per-asset size limit." >&2
+            exit 1
+          fi
+          echo "Source commit: $GORDUS_AI_SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Lock SHA-256: $GORDUS_AI_LOCK_SHA256" >> "$GITHUB_STEP_SUMMARY"
+          echo "Wheel count: $(find "$GORDUS_AI_WHEELHOUSE" -maxdepth 1 -name '*.whl' | wc -l)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Archive size bytes: $SIZE" >> "$GITHUB_STEP_SUMMARY"
+          cat "$GORDUS_AI_DIST/ai-libraries-py313-linux-x86_64.manifest.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish the persistent GitHub Release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          gh release view "$GORDUS_AI_RELEASE_TAG" --repo Gordus-Hub/Gordus-Hub >/dev/null 2>&1 && {
+            echo "Refusing to overwrite existing release tag $GORDUS_AI_RELEASE_TAG" >&2
+            exit 1
+          }
+          gh release create "$GORDUS_AI_RELEASE_TAG" \
+            "$GORDUS_AI_DIST/ai-libraries-py313-linux-x86_64.tar.gz" \
+            "$GORDUS_AI_DIST/ai-libraries-py313-linux-x86_64.SHA256SUMS" \
+            "$GORDUS_AI_DIST/ai-libraries-py313-linux-x86_64.manifest.json" \
+            "$GORDUS_AI_DIST/ai-libraries-py313-linux-x86_64.sbom.cdx.json" \
+            "$GORDUS_AI_DIST/ai-libraries-py313-linux-x86_64.THIRD_PARTY_NOTICES.txt" \
+            --repo Gordus-Hub/Gordus-Hub \
+            --target "$GORDUS_AI_SOURCE_SHA" \
+            --title "Reusable Python libraries — CPython 3.13 Linux x86_64 — ${GORDUS_AI_SOURCE_SHA:0:12}" \
+            --notes "Persistent binary wheelhouse for Argos Translate 1.11.0, CLTK 2.5.1, and Inspect AI 0.3.280 plus every dependency in the committed SHA-256 lock. Created from source commit $GORDUS_AI_SOURCE_SHA. Includes offline install verification, checksums, package inventory, CycloneDX SBOM, and third-party notices. Not a server installation; no task-quality certification is implied." \
+            --prerelease
