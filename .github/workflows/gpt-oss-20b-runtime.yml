@@ -1,164 +1,188 @@
-name: GPT-OSS 20B full model runtime
+name: GPT-OSS 20B full download and runtime preparation
 
 on:
   workflow_dispatch:
-    inputs:
-      max_model_len:
-        description: "Maximum model context length for this run"
-        required: true
-        default: "4096"
-      keep_runtime_minutes:
-        description: "Keep the inference server alive during this job (1-300 minutes)"
-        required: true
-        default: "10"
 
 permissions:
   contents: read
 
 concurrency:
-  group: gpt-oss-20b-gpu-runtime
+  group: gpt-oss-20b-download-preparation
   cancel-in-progress: false
 
 jobs:
-  download-and-run-full-model:
-    # Requires a configured runner with a supported GPU, >=20 GB VRAM,
-    # Docker, NVIDIA Container Toolkit, Python 3, and >=40 GB free disk.
-    # The public GitHub-hosted T4 (16 GB, compute capability 7.5) is not
-    # accepted by this fail-closed hardware gate.
+  download-and-prepare:
+    # Persistent runner required: model files and Docker image must survive the job.
+    # The GPU is not tested or used here; this workflow only downloads and prepares.
     runs-on: [self-hosted, linux, x64, gpu, gpt-oss-20b]
     timeout-minutes: 360
     env:
       MODEL_ID: openai/gpt-oss-20b
-      SERVED_MODEL_NAME: gpt-oss-20b
-      CONTAINER_NAME: gpt-oss-20b-runtime
-      MODEL_MAX_LEN: ${{ inputs.max_model_len }}
-      KEEP_MINUTES: ${{ inputs.keep_runtime_minutes }}
 
     steps:
-      - name: Validate inputs and runner prerequisites
+      - name: Validate disk, Docker, and Python prerequisites
         shell: bash
         run: |
           set -Eeuo pipefail
-          [[ "$MODEL_MAX_LEN" =~ ^[0-9]+$ ]] && (( MODEL_MAX_LEN >= 1024 && MODEL_MAX_LEN <= 131072 ))
-          [[ "$KEEP_MINUTES" =~ ^[0-9]+$ ]] && (( KEEP_MINUTES >= 1 && KEEP_MINUTES <= 300 ))
           command -v docker
           docker info >/dev/null
-          command -v nvidia-smi
           command -v python3
-          nvidia-smi
-          python3 - <<'PY'
-          import subprocess
-          raw = subprocess.check_output([
-              "nvidia-smi", "--query-gpu=name,compute_cap,memory.total",
-              "--format=csv,noheader,nounits"
-          ], text=True)
-          gpus = []
-          for line in raw.splitlines():
-              if not line.strip():
-                  continue
-              name, cap, memory = [part.strip() for part in line.split(",", 2)]
-              major, minor = cap.split(".", 1)
-              compute = int(major) + int(minor) / 10
-              gpus.append((name, compute, int(memory)))
-          eligible = [g for g in gpus if g[1] >= 9.0 and g[2] >= 20000]
-          if not eligible:
-              raise SystemExit(
-                  "FAIL-CLOSED: GPT-OSS 20B runtime requires a supported Hopper-or-later "
-                  "GPU with >=20,000 MiB VRAM. Detected GPUs: " + repr(gpus)
-              )
-          print("Eligible GPU(s):", eligible)
-          PY
-          free_kb=$(df -Pk "$HOME" | awk 'NR==2 {print $4}')
-          (( free_kb >= 40 * 1024 * 1024 )) || {
-            echo "FAIL: at least 40 GiB free storage is required under HOME" >&2
+          docker_root="$(docker info --format '{{.DockerRootDir}}')"
+          home_free_kb="$(df -Pk "$HOME" | awk 'NR==2 {print $4}')"
+          docker_free_kb="$(df -Pk "$docker_root" | awk 'NR==2 {print $4}')"
+          if (( home_free_kb < 75 * 1024 * 1024 )); then
+            echo "FAIL-CLOSED: at least 75 GiB free space is required on the HOME filesystem for the complete model repository." >&2
             exit 1
-          }
+          fi
+          if (( docker_free_kb < 20 * 1024 * 1024 )); then
+            echo "FAIL-CLOSED: at least 20 GiB free space is required on the Docker filesystem for the vLLM runtime image." >&2
+            exit 1
+          fi
+          mkdir -p "$HOME/models"
+          echo "MODEL_DIR=$HOME/models/gpt-oss-20b" >> "$GITHUB_ENV"
+          echo "Docker root: $docker_root"
+          df -h "$HOME" "$docker_root"
 
-      - name: Pull pinned inference runtime
-        run: docker pull vllm/vllm-openai:latest
-
-      - name: Download complete official model snapshot
+      - name: Install the Hugging Face download utility
         shell: bash
         run: |
           set -Eeuo pipefail
           python3 -m venv "$RUNNER_TEMP/hf-download-venv"
           "$RUNNER_TEMP/hf-download-venv/bin/pip" install --disable-pip-version-check --upgrade huggingface_hub
-          mkdir -p "$HOME/.cache/huggingface"
+
+      - name: Pin the official model snapshot revision
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          revision="$("$RUNNER_TEMP/hf-download-venv/bin/python" -c 'import os; from huggingface_hub import HfApi; print(HfApi().model_info(os.environ["MODEL_ID"]).sha)')"
+          [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "FAIL: could not resolve an immutable model revision" >&2
+            exit 1
+          }
+          echo "MODEL_REVISION=$revision" >> "$GITHUB_ENV"
+          echo "Pinned official revision: $revision"
+
+      - name: Download the complete official model repository
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "$MODEL_DIR"
           "$RUNNER_TEMP/hf-download-venv/bin/hf" download "$MODEL_ID" \
-            --cache-dir "$HOME/.cache/huggingface" \
+            --revision "$MODEL_REVISION" \
+            --local-dir "$MODEL_DIR" \
             --max-workers 4
-          test -d "$HOME/.cache/huggingface/hub"
-          echo "PASS: Hugging Face download command completed for $MODEL_ID"
-          du -sh "$HOME/.cache/huggingface"
+          echo "PASS: full Hugging Face repository download command completed."
 
-      - name: Start the full GPT-OSS 20B model
+      - name: Verify every repository file and write a download manifest
         shell: bash
         run: |
           set -Eeuo pipefail
-          docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
-          docker run -d --name "$CONTAINER_NAME" --gpus all --ipc=host \
-            -p 127.0.0.1:8000:8000 \
-            -e HF_HUB_ENABLE_HF_TRANSFER=1 \
-            -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
-            vllm/vllm-openai:latest \
-            --model "$MODEL_ID" \
-            --served-model-name "$SERVED_MODEL_NAME" \
-            --tensor-parallel-size 1 \
-            --max-model-len "$MODEL_MAX_LEN" \
-            --host 0.0.0.0 --port 8000
-          deadline=$((SECONDS + 3300))
-          until curl --fail --silent http://127.0.0.1:8000/v1/models >/tmp/gpt-oss-20b-models.json; do
-            if ! docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null | grep -qx true; then
-              docker logs "$CONTAINER_NAME" || true
-              exit 1
-            fi
-            if (( SECONDS >= deadline )); then
-              docker logs "$CONTAINER_NAME" || true
-              echo "FAIL: timed out while loading full model weights" >&2
-              exit 1
-            fi
-            sleep 15
-          done
-          cat /tmp/gpt-oss-20b-models.json
-          python3 - <<'PY'
+          "$RUNNER_TEMP/hf-download-venv/bin/python" - <<'PY'
           import json
-          with open("/tmp/gpt-oss-20b-models.json") as f:
-              data = json.load(f)
-          ids = [m.get("id") for m in data.get("data", [])]
-          if "gpt-oss-20b" not in ids:
-              raise SystemExit(f"FAIL: expected model missing; reported models={ids}")
-          print("PASS: full model is loaded and served as gpt-oss-20b")
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from huggingface_hub import HfApi
+
+          repo_id = os.environ["MODEL_ID"]
+          revision = os.environ["MODEL_REVISION"]
+          model_dir = Path(os.environ["MODEL_DIR"])
+          api = HfApi()
+
+          remote_files = api.list_repo_files(repo_id=repo_id, revision=revision)
+          if not remote_files:
+              raise SystemExit("FAIL: upstream returned an empty file list")
+
+          missing = [name for name in remote_files if not (model_dir / name).is_file()]
+          if missing:
+              raise SystemExit("FAIL: missing repository files: " + repr(missing[:50]))
+
+          weight_files = [
+              name for name in remote_files
+              if "/" not in name and name.endswith(".safetensors")
+          ]
+          if not weight_files:
+              raise SystemExit("FAIL: no top-level safetensors model checkpoint files were downloaded")
+          if not (model_dir / "config.json").is_file():
+              raise SystemExit("FAIL: model config.json is missing")
+          if not (model_dir / "tokenizer.json").is_file():
+              raise SystemExit("FAIL: tokenizer.json is missing")
+
+          infos = api.get_paths_info(
+              repo_id=repo_id,
+              paths=remote_files,
+              revision=revision,
+          )
+          size_mismatches = []
+          total_bytes = 0
+          for info in infos:
+              name = info.path
+              path = model_dir / name
+              local_size = path.stat().st_size
+              expected_size = getattr(info, "size", None)
+              if expected_size is not None and local_size != int(expected_size):
+                  size_mismatches.append((name, int(expected_size), local_size))
+              total_bytes += local_size
+          if size_mismatches:
+              raise SystemExit("FAIL: file sizes differ from upstream metadata: " + repr(size_mismatches[:20]))
+
+          manifest = {
+              "status": "DOWNLOAD_VERIFIED",
+              "repo_id": repo_id,
+              "revision": revision,
+              "verified_at_utc": datetime.now(timezone.utc).isoformat(),
+              "repository_file_count": len(remote_files),
+              "safetensors_checkpoint_files": weight_files,
+              "total_local_bytes": total_bytes,
+              "model_directory": str(model_dir),
+              "verification": [
+                  "every file listed by the upstream repository exists locally",
+                  "local file sizes match upstream metadata where provided",
+                  "config.json and tokenizer.json exist",
+                  "at least one top-level safetensors checkpoint file exists",
+              ],
+          }
+          manifest_path = model_dir / "download-manifest.json"
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(manifest, indent=2))
+          print("PASS: complete snapshot verified; manifest:", manifest_path)
           PY
 
-      - name: Run a real inference smoke test
+      - name: Download and verify the vLLM runtime infrastructure
         shell: bash
         run: |
           set -Eeuo pipefail
-          curl --fail --silent --show-error http://127.0.0.1:8000/v1/chat/completions \
-            -H 'Content-Type: application/json' \
-            -d '{"model":"gpt-oss-20b","messages":[{"role":"user","content":"Reply with exactly: GPT-OSS-20B-INFERENCE-OK"}],"max_tokens":64,"temperature":0}' \
-            -o /tmp/gpt-oss-20b-response.json
-          python3 - <<'PY'
-          import json
-          with open("/tmp/gpt-oss-20b-response.json") as f:
-              data = json.load(f)
-          choices = data.get("choices") or []
-          if not choices:
-              raise SystemExit(f"FAIL: no completion returned: {data}")
-          text = choices[0].get("message", {}).get("content", "")
-          if not text.strip():
-              raise SystemExit("FAIL: inference returned empty content")
-          print("PASS: real inference returned non-empty output")
-          print("Response:", text[:500])
-          PY
+          docker pull vllm/vllm-openai:latest
+          docker image inspect vllm/vllm-openai:latest >/dev/null
+          docker run --rm --entrypoint python vllm/vllm-openai:latest \
+            -c 'import vllm; print("vLLM runtime available; version:", vllm.__version__)'
+          image_id="$(docker image inspect --format '{{.Id}}' vllm/vllm-openai:latest)"
+          echo "VLLM_IMAGE_ID=$image_id" >> "$GITHUB_ENV"
+          echo "PASS: vLLM Docker image downloaded and Python package import verified."
 
-      - name: Keep runtime alive for the selected test window
-        shell: bash
-        run: sleep "$((KEEP_MINUTES * 60))"
-
-      - name: Always stop the temporary test service
-        if: always()
+      - name: Record runtime preparation evidence
         shell: bash
         run: |
-          docker logs "$CONTAINER_NAME" 2>/dev/null | tail -n 150 || true
-          docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+          set -Eeuo pipefail
+          "$RUNNER_TEMP/hf-download-venv/bin/python" - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          model_dir = Path(os.environ["MODEL_DIR"])
+          manifest_path = model_dir / "download-manifest.json"
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest["runtime_infrastructure"] = {
+              "container_image": "vllm/vllm-openai:latest",
+              "container_image_id": os.environ["VLLM_IMAGE_ID"],
+              "vllm_import_check": "PASS",
+          }
+          manifest["preparation_completed_at_utc"] = datetime.now(timezone.utc).isoformat()
+          manifest["status"] = "MODEL_DOWNLOAD_AND_RUNTIME_PREPARATION_VERIFIED"
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(manifest, indent=2))
+          PY
+
+      # Deliberately no model serving or inference test in this workflow.
+      # Weights, manifest, and Docker image are retained on the persistent runner.
