@@ -254,6 +254,17 @@ jobs:
           "$venv/bin/python" -m pip inspect --local > "$evidence/pip-inspect.json"
           printf '%s\n' 'PERSISTENT_INSTALLATION=false' 'LANGUAGE_DATA_DOWNLOADS=false' 'MODEL_DOWNLOADS=false' 'TASK_CERTIFICATION=NOT_GRANTED' > "$evidence/execution-boundary.txt"
 
+      - name: Export the validated lock candidate for explicit repository review
+        if: success()
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          lock="$RUNNER_TEMP/gordus-ai-runtime-evidence/runtime-py313-linux-x86_64.txt"
+          test -s "$lock"
+          printf '%s\\n' 'GORDUS_RUNTIME_LOCK_BASE64_BEGIN'
+          base64 -w 64 "$lock" | sed 's/^/GORDUS_RUNTIME_LOCK_BASE64:/'
+          printf '%s\\n' 'GORDUS_RUNTIME_LOCK_BASE64_END'
+
       - name: Upload lock and combined-runtime evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # pinned v4 tag
