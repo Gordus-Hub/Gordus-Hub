@@ -21,6 +21,7 @@ RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" /tmp/android-cli \
     && curl --fail --location --silent --show-error \
        "https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_CMDLINE_TOOLS_REVISION}_latest.zip" \
        --output /tmp/android-cli.zip \
+    && printf "%s  %s\n" "$ANDROID_CMDLINE_TOOLS_SHA256" /tmp/android-cli.zip | sha256sum --check --status \
     && unzip -q /tmp/android-cli.zip -d /tmp/android-cli \
     && mkdir -p "${ANDROID_HOME}/cmdline-tools/latest" \
     && cp -a /tmp/android-cli/cmdline-tools/. "${ANDROID_HOME}/cmdline-tools/latest/" \
