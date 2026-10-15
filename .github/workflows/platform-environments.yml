@@ -1,0 +1,47 @@
+name: Debian 13 + Android 16/17 environment
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".devcontainer/**"
+      - "scripts/install-android-sdks.sh"
+      - "platforms/**"
+      - ".github/workflows/platform-environments.yml"
+  pull_request:
+    paths:
+      - ".devcontainer/**"
+      - "scripts/install-android-sdks.sh"
+      - "platforms/**"
+      - ".github/workflows/platform-environments.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-verify:
+    name: Build Trixie container and install SDK APIs 36/37
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Debian 13 development container
+        run: docker build --pull --tag gordus-hub-platform-env:test --file .devcontainer/Dockerfile .
+
+      - name: Install and verify Android 16 and Android 17 SDKs
+        run: |
+          docker run --rm gordus-hub-platform-env:test bash -lc '
+            set -Eeuo pipefail
+            . /etc/os-release
+            test "$VERSION_ID" = "13"
+            test "$VERSION_CODENAME" = "trixie"
+            bash /usr/local/bin/install-android-sdks
+            test -s "$ANDROID_HOME/platforms/android-36/android.jar"
+            test -s "$ANDROID_HOME/platforms/android-37.0/android.jar"
+            test -f "$ANDROID_HOME/platforms/android-37.0/source.properties"
+            test -f "$ANDROID_HOME/system-images/android-36/google_apis/x86_64/package.xml"
+            echo "PASS: Debian 13 (trixie), Android 16/API 36 and Android 17/API 37.0 SDK platforms/build tools verified."
+          '
