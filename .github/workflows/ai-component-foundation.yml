@@ -207,7 +207,7 @@ jobs:
             resolver="$RUNNER_TEMP/venv-lock-generator"
             python -m venv "$resolver"
             "$resolver/bin/python" -m pip install --no-input --no-cache-dir 'pip-tools==7.6.2'
-            "$resolver/bin/pip-compile" --generate-hashes --resolver=backtracking --strip-extras \
+            "$resolver/bin/pip-compile" --generate-hashes --resolver=backtracking --strip-extras --allow-unsafe \
               --output-file "$lock" ai/requirements/runtime.in
             printf '%s\n' 'LOCK_SOURCE=GENERATED_CI_CANDIDATE_NOT_COMMITTED' 'LOCK_REVIEW_STATUS=NOT_APPROVED_FOR_PERSISTENT_INSTALLATION' > "$evidence/lock-boundary.txt"
           fi
