@@ -79,7 +79,7 @@ def main() -> int:
     if policy.get("fail_closed") is not True:
         errors.append("manifest policy.fail_closed must be true")
     for field in ("persistent_installation_authorized", "model_weight_downloads_in_ci",
-                  "model_execution_authorized", "argos_language_packages_downloads_in_ci",
+                  "model_execution_authorized", "argos_language_package_downloads_in_ci",
                   "cltk_language_resource_downloads_in_ci", "inspect_ai_suite_execution_authorized"):
         if policy.get(field) is not False:
             errors.append(f"manifest policy.{field} must be false")
