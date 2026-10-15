@@ -12,9 +12,14 @@ ENV PATH=${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        bash ca-certificates curl git openjdk-21-jdk-headless unzip \
-       libasound2t64 libgcc-s1 libgl1 libncurses6 libnss3 libpng16-16t64 libpulse0 \
-       libstdc++6 libx11-6 libxcb1 libxcomposite1 libxcursor1 libxi6 \
-       libxrender1 libxtst6 zlib1g \
+       libasound2t64 libdbus-1-3 libegl1 libexpat1 libfontconfig1 libfreetype6 \
+       libgcc-s1 libgbm1 libgl1 libglu1-mesa libncurses6 libnss3 libopengl0 \
+       libpng16-16t64 libpulse0 libstdc++6 libvulkan1 zlib1g \
+       libx11-6 libx11-xcb1 libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
+       libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 \
+       libxcb-xkb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxfixes3 \
+       libxi6 libxinerama1 libxkbcommon-x11-0 libxkbcommon0 libxkbfile1 \
+       libxrandr2 libxrender1 libxres1 libxshmfence1 libxss1 libxtst6 libxv1 libxxf86vm1 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p "${ANDROID_HOME}/cmdline-tools" /tmp/android-cli \
