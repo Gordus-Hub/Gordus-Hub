@@ -1,0 +1,9 @@
+{
+  "name": "Gordus Hub — Debian 13 + Android 16/17",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "postCreateCommand": "bash scripts/install-android-sdks.sh",
+  "remoteUser": "root"
+}
