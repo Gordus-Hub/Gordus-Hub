@@ -44,10 +44,7 @@ jobs:
           command -v nvidia-smi
           nvidia-smi
           python3 - <<'PY'
-          import json, subprocess
-          rows = json.loads(subprocess.check_output([
-              "nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"
-          ], text=True).splitlines().__str__()) if False else None
+          import subprocess
           raw = subprocess.check_output([
               "nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"
           ], text=True)
