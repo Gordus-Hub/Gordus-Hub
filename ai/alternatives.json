@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "state": "CANDIDATES_ONLY_NOT_ACTIVATED",
-  "canonical_component_ids_mutated": false,
+  "state": "ARGOS_TRANSLATION_LIBRARY_SELECTED_FOR_VALIDATION_NOT_CERTIFIED",
+  "canonical_component_ids_mutated": true,
   "policy": {
     "fail_closed": true,
     "alternative_weight_downloads_authorized": false,
@@ -11,6 +11,27 @@
     "task_quality_eval_required": true
   },
   "recommendations": [
+    {
+      "component_id": "argostranslate",
+      "difficulty_rank": 2,
+      "package_version": "1.11.0",
+      "python_wheel_size_bytes_approx": 41600,
+      "language_pair_package_size_average_bytes_approx": 100000000,
+      "mode": "OFFLINE_LOCAL_TRANSLATION",
+      "advantages": [
+        "Small library wheel",
+        "Local inference without a remote translation service",
+        "Only approved language-direction packages need to be acquired"
+      ],
+      "limitations": [
+        "Not weight-free: .argosmodel assets are required",
+        "Coverage is narrower than MADLAD-400",
+        "Direct source/target pair is required; automatic pivoting is disabled"
+      ],
+      "required_adapter": "ArgosTranslateAdapter",
+      "language_pair_matrix": "ai/translation/pairs.json",
+      "status": "ACTIVE_LIBRARY_CANDIDATE_LANGUAGE_PAIRS_NOT_APPROVED"
+    },
     {
       "component_id": "inspect-ai",
       "difficulty_rank": 5,
@@ -47,7 +68,8 @@
         "revision_pin_required_before_download": true
       },
       "quantization_applicable": true,
-      "status": "PREFERRED_QUANTIZED_CANDIDATE_PENDING_PIN_AND_EVALUATION"
+      "status": "DORMANT_FALLBACK_NOT_ACTIVE",
+      "note": "Retained only if Argos coverage fails the approved project language matrix"
     },
     {
       "component_id": "qwen3-coder-30b-a3b-instruct",
@@ -132,9 +154,10 @@
   "aggregate_resource_decision": {
     "standard_github_hosted_runner_ssd_gib": 14,
     "preferred_quantized_payload_gb_approx": {
-      "madlad_onnx_int8": 4.7,
-      "qwen3_coder_q4_k_m": 18.557,
-      "total_before_packages_cache_and_ancient_assets": 23.257
+      "argos_library_wheel_gb_approx": 0.0000416,
+      "argos_language_pair_package_gb_average_approx": 0.1,
+      "qwen3_coder_original_snapshot_gb_approx": 61.1,
+      "note": "Wheel size is not total runtime size: dependencies and approved language packages are separate. Qwen remains the active large model and still needs a larger runner."
     },
     "same_family_recommendation": "Use a confirmed larger GitHub-hosted runner with at least 60 GB free disk and around 64 GB RAM for conservative staging and load validation, or select smaller fallbacks and re-evaluate quality. Measure actual disk/RAM before any download.",
     "smaller_fallback_payload_gb_approx": {
@@ -142,6 +165,7 @@
       "qwen2_5_coder_7b_q4_k_m": 4.683,
       "total_before_packages_cache_and_ancient_assets": 9.383
     },
-    "note": "The smaller fallback has limited margin once package profiles, temporary files, caches, containers and Heidelberg assets are added. It is not guaranteed to fit on the standard runner."
-  }
+    "note": "Translation changes from one broad-coverage 3B checkpoint to a small library plus approved pair models. This reduces storage for narrow language needs but coverage must be tested. No pair assets downloaded."
+  },
+  "selected_translation_component": "argostranslate"
 }

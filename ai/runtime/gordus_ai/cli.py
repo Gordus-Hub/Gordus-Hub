@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 
+from .argos_adapter import ArgosTranslateAdapter
 from .contracts import WorkRequest
 from .orchestrator import GordusOrchestrator
 
@@ -21,7 +22,9 @@ def main() -> int:
         payload = json.load(sys.stdin)
         request = WorkRequest.from_mapping(payload)
         orchestrator = GordusOrchestrator.from_files(
-            Path(args.manifest), Path(args.wiring)
+            Path(args.manifest),
+            Path(args.wiring),
+            adapters={"argostranslate": ArgosTranslateAdapter()},
         )
         result = orchestrator.run(request)
     except (ValueError, OSError) as exc:

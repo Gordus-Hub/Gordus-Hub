@@ -1,38 +1,45 @@
-# Governed model acquisition readiness
+# Governed component acquisition readiness
 
-**State: BLOCKED BEFORE WEIGHT DOWNLOAD.** This record intentionally does not claim a download or installation has started. The PR that introduced the wiring is merged into `main` at `a71927735b117b4777e20cb773cc8cacfdb1ec3a`.
+**State: BLOCKED BEFORE MODEL-PACKAGE DOWNLOAD.** This record reflects the decision to replace the active MADLAD translation checkpoint with the Argos Translate Python library. It does not claim that Argos language packs or Qwen weights have been downloaded. The wiring is merged into `main` at `a71927735b117b4777e20cb773cc8cacfdb1ec3a`; these follow-up changes remain in draft PR #8.
 
-## What the five registered components actually are
+## Five registered components
 
-The registry contains two pretrained-model repositories (MADLAD and Qwen), two Python packages (Inspect AI and CLTK), and one research-code repository (Heidelberg-NLP). The last item is not a single model file. Its README lists seven separately hosted pretrained model repositories and recommends downloading Universal Dependencies treebanks separately; each of those assets needs its own revision, size and license record.
+The active registry contains three Python packages (Inspect AI, Argos Translate and CLTK), one pretrained coding model (Qwen3-Coder), and one research-code repository (Heidelberg-NLP). Argos reduces translation storage when only selected language directions are needed, but its language coverage is narrower than MADLAD-400's advertised 419 languages.
 
-## Immutable source pins
+## Immutable source pins and package profiles
 
-| Component | Source revision / version | Acquisition note |
+| Component | Version/revision | Acquisition note |
 | --- | --- | --- |
-| Inspect AI | `inspect-ai==0.3.280` | Package and transitive dependencies need an audited lock/wheelhouse. |
-| MADLAD-400-3B-MT | `fa184c675da0b5c9e1c8694fccd4e12e2d422094` | Primary full-precision `model.safetensors` is 11,761,587,872 bytes; advertised SHA-256 is `66ff5f8fcaf92291da486fdfbd4d5233cec90e1359348a56e3172c978b3a76d4`. |
-| Qwen3-Coder-30B-A3B-Instruct | `b2cff646eb4bb1d68355c01b18ae02e7cf42d120` | Full snapshot is approximately 61.1 GB and comprises 16 weight shards. |
-| CLTK | `cltk==2.5.1` | Package and transitive dependencies need an audited lock/wheelhouse. |
-| Heidelberg-NLP ancient-language-models | `26b34a912bdbfd45089cb2e8b5b39b38a538c54c` | Project `pyproject.toml` declares MIT for its code and requires Python 3.12. External model weights and treebanks remain independently gated. |
+| Inspect AI | `inspect-ai==0.3.280` | Package and transitive dependencies need an audited hash-locked wheelhouse. |
+| Argos Translate | `argostranslate==1.11.0` | PyPI wheel is about 41.6 KB; direct dependencies are separate. Language-pair model packages average about 100 MB each and need explicit approval, provenance, hash and license evidence. |
+| Qwen3-Coder-30B-A3B-Instruct | `b2cff646eb4bb1d68355c01b18ae02e7cf42d120` | Original full snapshot is approximately 61.1 GB and comprises 16 weight shards. Smaller GGUF alternatives remain separate candidates until pinned and evaluated. |
+| CLTK | `cltk==2.5.1` | Package and transitive dependencies need an audited hash-locked wheelhouse. |
+| Heidelberg-NLP ancient-language-models | `26b34a912bdbfd45089cb2e8b5b39b38a538c54c` | Code declares MIT in `pyproject.toml` and requires Python 3.12. Linked checkpoints and treebanks require separate provenance/license review. |
 
-Official source records: [MADLAD model files](https://huggingface.co/google/madlad400-3b-mt/tree/fa184c675da0b5c9e1c8694fccd4e12e2d422094), [Qwen model files](https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct/tree/b2cff646eb4bb1d68355c01b18ae02e7cf42d120), and [Heidelberg source at the pinned commit](https://github.com/Heidelberg-NLP/ancient-language-models/tree/26b34a912bdbfd45089cb2e8b5b39b38a538c54c).
+Sources: [Argos Translate on PyPI](https://pypi.org/project/argostranslate/1.11.0/), [Argos Translate project and language packs](https://github.com/argosopentech/argos-translate), [Argos language package index](https://github.com/argosopentech/argospm-index/blob/main/index.json), [Qwen upstream](https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct/tree/b2cff646eb4bb1d68355c01b18ae02e7cf42d120), and [Heidelberg source at its pinned commit](https://github.com/Heidelberg-NLP/ancient-language-models/tree/26b34a912bdbfd45089cb2e8b5b39b38a538c54c).
 
-## Hard resource and persistence gate
+## Translation coverage gate
 
-A standard GitHub-hosted runner has 14 GB SSD total. That is insufficient to stage both full model snapshots, which total about 73 GB before package dependencies, download overhead and temporary files. A guarded download job must check at least 110,000,000,000 bytes free before downloading any model weights and should use a GitHub-hosted larger runner with around 128 GiB RAM for full checkpoint load testing. This repository's established environment only proves the standard ephemeral runner path; it does not prove a larger runner label is configured.
+Argos is an offline Python library backed by CTranslate2, not a weight-free translation algorithm. Its wheel is small, but each language direction needs a separate `.argosmodel` artifact; project documentation puts language-pair packages at around 100 MB on average. The supported language/pair inventory is materially narrower than MADLAD-400's advertised 419 languages.
 
-GitHub Actions workspaces are disposable. When a job finishes, model files installed only on that runner disappear. The existing Actions cache is not a viable repository-wide destination for these full model snapshots, and the established workflow does not have an approved durable model-storage target. Therefore a one-run download/install test must not be represented as a persistent runtime deployment.
+The suggested initial pilot is Spanish→English and English→Spanish, but those pairs are **not approved** in `ai/translation/pairs.json`. Each approved pair must record source/target codes, package version, immutable artifact URL, byte size, SHA-256 and a verified license status. The CLI does not download language packs and disables automatic pivoting.
 
-## Required chronological protocol
+## Resource and persistence gate
 
-1. Verify the source commit, declared license metadata and free-disk/RAM gate before acquiring any large file.
-2. Resolve and review hash-locked transitive dependency lockfiles; download a wheelhouse for all package components.
-3. Download and verify all five registered component sources in registry order, recording source revision, per-file SHA-256, size and status. Stop if any acquisition/license gate fails.
-4. Only after the entire download stage succeeds, install each component sequentially into its declared isolated environment, from the staged local sources/wheelhouse wherever feasible.
-5. Run model-load/inference checks only after the backend is pinned and actual weights exist; capture evidence, independent evaluation and rollback references.
-6. Publish a release decision only after the real runtime is available. Do not upload these weights to ordinary Actions artifacts or place them in the repository tree.
+A standard GitHub-hosted runner has about 14 GB SSD total. The active Qwen original snapshot (about 61.1 GB), dependency environments and temporary staging still exceed that runner's capacity. The conservative 110,000,000,000-byte free-disk gate remains until a Qwen profile and storage target are approved. The Argos library does not remove the remaining Qwen resource requirement.
+
+GitHub Actions workspaces are disposable. Successful workflow downloads do not create persistent storage. Do not upload large model weights as ordinary Actions artifacts or commit them to the repository. A confirmed larger GitHub-hosted runner and approved durable storage target—or a clearly scoped ephemeral-only test—are still required.
+
+## Required chronology
+
+1. Verify source commits/package versions, license metadata, and actual runner disk/RAM.
+2. Approve the Argos language-pair matrix and each pair's hash/provenance/license record.
+3. Generate and review hash-locked transitive dependency files and wheelhouses.
+4. Download all five registered component sources in the declared order. For Argos, acquire the library and only approved direct-pair packages; for Heidelberg, acquire only task-selected assets with separate license review. Record size and SHA-256 for every artifact and stop on any failure.
+5. Only after the whole acquisition phase passes, install the five components sequentially in isolated environments from staged artifacts wherever practical.
+6. Run translation tests, Qwen load/inference checks, CLTK/Heidelberg task tests and independent Inspect AI evaluation only after the relevant gates pass.
+7. Preserve per-step evidence, rollback pointers and non-regression decisions.
 
 ## Current decision
 
-No model weights were downloaded in the current runner context and no persistent installation exists. The workflow must remain fail-closed until runner capacity, a reviewed lockfile set, Heidelberg external-asset licenses, runtime backend and a durable storage destination (or an explicitly ephemeral validation-only objective) are resolved.
+MADLAD has been removed from the active acquisition order and replaced with Argos Translate. No Argos language-pair package or Qwen checkpoint has been downloaded under this change. Translation remains blocked until the pair matrix is approved; Qwen remains blocked by runner capacity, backend, dependency-lock and persistence gates.

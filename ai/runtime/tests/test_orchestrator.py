@@ -40,7 +40,7 @@ def permissive_test_manifest():
     manifest = copy.deepcopy(manifest)
     manifest["policy"]["model_execution_authorized"] = True
     for component in manifest["components"]:
-        if component["id"] in {"madlad400-3b-mt", "qwen3-coder-30b-a3b-instruct"}:
+        if component["id"] == "qwen3-coder-30b-a3b-instruct":
             component["installation_enabled"] = True
             component["revision"] = "a" * 40
             component["license"]["status"] = "VERIFIED"
@@ -58,31 +58,27 @@ class WiringTests(unittest.TestCase):
         for route in orchestrator.routes.values():
             self.assertTrue(set(route).issubset(expected))
         self.assertEqual(orchestrator.routes["translate_and_evaluate"],
-                         ("madlad400-3b-mt", "inspect-ai"))
+                         ("argostranslate", "inspect-ai"))
 
     def test_real_manifest_fails_closed_before_model_invocation(self):
         manifest, wiring = load_inputs()
-        probe = FakeAdapter("madlad400-3b-mt", "CALLED:")
-        orchestrator = GordusOrchestrator(
-            manifest, wiring, adapters={probe.component_id: probe}, git_sha="test"
-        )
+        orchestrator = GordusOrchestrator(manifest, wiring, git_sha="test")
         request = WorkRequest.from_mapping({
             "request_id": "case-001",
             "task": "translate",
             "text": "hola",
-            "parameters": {"target_language": "en"},
+            "parameters": {"source_language": "es", "target_language": "en"},
         })
         result = orchestrator.run(request)
         self.assertEqual(result.status, "BLOCKED")
-        self.assertEqual(probe.calls, 0)
-        self.assertIn("MODEL_EXECUTION_NOT_AUTHORIZED",
+        self.assertIn("ADAPTER_IMPLEMENTATION_NOT_REGISTERED",
                       result.evidence[0].gate_codes)
         self.assertIsNone(result.output_text)
 
     def test_injected_adapter_runs_only_with_test_fixture_gates_satisfied(self):
         _, wiring = load_inputs()
         manifest = permissive_test_manifest()
-        adapter = FakeAdapter("madlad400-3b-mt", prefix="translated:")
+        adapter = FakeAdapter("argostranslate", prefix="translated:")
         orchestrator = GordusOrchestrator(
             manifest, wiring, adapters={adapter.component_id: adapter}, git_sha="test"
         )
@@ -90,7 +86,7 @@ class WiringTests(unittest.TestCase):
             "request_id": "case-002",
             "task": "translate",
             "text": "hola",
-            "parameters": {"target_language": "en"},
+            "parameters": {"source_language": "es", "target_language": "en"},
         })
         result = orchestrator.run(request)
         self.assertEqual(result.status, "SUCCEEDED")
@@ -103,7 +99,7 @@ class WiringTests(unittest.TestCase):
     def test_pipeline_stops_at_blocked_evaluator(self):
         manifest = permissive_test_manifest()
         _, wiring = load_inputs()
-        translator = FakeAdapter("madlad400-3b-mt", prefix="translated:")
+        translator = FakeAdapter("argostranslate", prefix="translated:")
         orchestrator = GordusOrchestrator(
             manifest, wiring, adapters={translator.component_id: translator}, git_sha="test"
         )
@@ -111,20 +107,20 @@ class WiringTests(unittest.TestCase):
             "request_id": "case-003",
             "task": "translate_and_evaluate",
             "text": "hola",
-            "parameters": {"target_language": "en", "evaluation_suite_id": "suite-pending"},
+            "parameters": {"source_language": "es", "target_language": "en", "evaluation_suite_id": "suite-pending"},
         })
         result = orchestrator.run(request)
         self.assertEqual(result.status, "BLOCKED")
         self.assertEqual(translator.calls, 1)
         self.assertEqual([item.component_id for item in result.evidence],
-                         ["madlad400-3b-mt", "inspect-ai"])
+                         ["argostranslate", "inspect-ai"])
         self.assertEqual(result.evidence[0].status, "SUCCEEDED")
         self.assertEqual(result.evidence[1].status, "BLOCKED")
         self.assertIsNone(result.output_text)
 
     def test_missing_required_parameter_is_rejected_before_adapter(self):
         manifest, wiring = load_inputs()
-        adapter = FakeAdapter("madlad400-3b-mt")
+        adapter = FakeAdapter("argostranslate")
         orchestrator = GordusOrchestrator(
             manifest, wiring, adapters={adapter.component_id: adapter}, git_sha="test"
         )
@@ -133,7 +129,7 @@ class WiringTests(unittest.TestCase):
         })
         result = orchestrator.run(request)
         self.assertEqual(result.status, "REJECTED")
-        self.assertEqual(result.error_code, "REQUIRED_PARAMETER_MISSING:target_language")
+        self.assertEqual(result.error_code, "REQUIRED_PARAMETER_MISSING:source_language,target_language")
         self.assertEqual(adapter.calls, 0)
 
     def test_evidence_does_not_include_raw_input(self):
@@ -142,7 +138,7 @@ class WiringTests(unittest.TestCase):
         secret_like_text = "DO_NOT_PUT_RAW_TEXT_IN_EVIDENCE_84931"
         request = WorkRequest.from_mapping({
             "request_id": "case-005", "task": "translate", "text": secret_like_text,
-            "parameters": {"target_language": "es"}
+            "parameters": {"source_language": "en", "target_language": "es"}
         })
         serialized = json.dumps(orchestrator.run(request).to_dict(), ensure_ascii=False)
         self.assertNotIn(secret_like_text, serialized)
@@ -163,3 +159,12 @@ class WiringTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ArgosAdapterGateTests(unittest.TestCase):
+    def test_argos_adapter_blocks_until_language_pair_matrix_is_approved(self):
+        from gordus_ai.argos_adapter import ArgosTranslateAdapter
+
+        readiness = ArgosTranslateAdapter().preflight()
+        self.assertFalse(readiness.ready)
+        self.assertIn("LANGUAGE_PAIR_MATRIX_NOT_APPROVED", readiness.gate_codes)

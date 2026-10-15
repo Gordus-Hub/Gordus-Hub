@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Mapping, Sequence
 
-from .adapters import ComponentAdapter, UnavailableAdapter
+from .adapters import AdapterGateError, ComponentAdapter, UnavailableAdapter
 from .contracts import (
     AdapterReadiness,
     PipelineResult,
@@ -204,6 +204,18 @@ class GordusOrchestrator:
                     raise TypeError("adapter output is not a string")
                 if len(output) > MAX_OUTPUT_CHARS:
                     raise ValueError("adapter output exceeds the contract limit")
+            except AdapterGateError as exc:
+                evidence.append(StepEvidence(
+                    component_id=component_id, status="BLOCKED",
+                    started_at_utc=step_start, finished_at_utc=utc_now(),
+                    input_sha256=input_hash, output_sha256=None,
+                    gate_codes=(exc.gate_code,), previous_component_id=previous,
+                ))
+                return PipelineResult(
+                    request_id=request.request_id, task=request.task, status="BLOCKED",
+                    started_at_utc=started, finished_at_utc=utc_now(), git_sha=self.git_sha,
+                    route=route, evidence=tuple(evidence), error_code=exc.gate_code,
+                )
             except Exception:
                 evidence.append(StepEvidence(
                     component_id=component_id, status="FAILED",

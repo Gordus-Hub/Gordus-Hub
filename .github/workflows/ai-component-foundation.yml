@@ -65,7 +65,7 @@ jobs:
           python -m unittest discover -s ai/runtime/tests -v \
             2>&1 | tee "$RUNNER_TEMP/gordus-ai-evidence/wiring-contract-tests.txt"
           set +e
-          printf '%s\n' '{"request_id":"ci-preflight","task":"translate","text":"probe","parameters":{"target_language":"en"}}' \
+          printf '%s\n' '{"request_id":"ci-preflight","task":"translate","text":"probe","parameters":{"source_language":"es","target_language":"en"}}' \
             | python -m gordus_ai.cli \
                 --manifest ai/components.json --wiring ai/wiring.json \
                 > "$RUNNER_TEMP/gordus-ai-evidence/wiring-dry-run.json"
@@ -114,6 +114,7 @@ jobs:
           cache: pip
           cache-dependency-path: |
             ai/requirements/evaluation.txt
+            ai/requirements/translation.txt
             ai/requirements/model-runtime.txt
             ai/requirements/ancient.txt
 
@@ -133,6 +134,21 @@ jobs:
           "$venv/bin/python" -m pip check
           "$venv/bin/python" -m pip freeze \
             > "$RUNNER_TEMP/gordus-ai-evidence/evaluation-pip-freeze.txt"
+
+      - name: Install and smoke-test Argos Translate library only
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          venv="$RUNNER_TEMP/venv-translation"
+          python -m venv "$venv"
+          "$venv/bin/python" -m pip install --disable-pip-version-check \
+            --no-input -r ai/requirements/translation.txt
+          "$venv/bin/python" -c 'import argostranslate, argostranslate.package, argostranslate.translate; from importlib.metadata import version; print("argostranslate=" + version("argostranslate"))'
+          "$venv/bin/python" -m pip check
+          "$venv/bin/python" -m pip freeze \
+            > "$RUNNER_TEMP/gordus-ai-evidence/translation-pip-freeze.txt"
+          printf '%s\n' 'ARGOS_LANGUAGE_PACKS_DOWNLOADED=false' \
+            > "$RUNNER_TEMP/gordus-ai-evidence/translation-boundary.txt"
 
       - name: Install and smoke-test model runtime libraries only
         shell: bash
@@ -166,6 +182,7 @@ jobs:
         run: |
           printf '%s\n' \
             'MODEL_WEIGHTS_DOWNLOADED=false' \
+            'ARGOS_LANGUAGE_PACKS_DOWNLOADED=false' \
             'MODEL_INFERENCE_TESTED=false' \
             'CERTIFICATION=NOT_GRANTED' \
             'TRANSITIVE_LOCKFILES=FOLLOW_UP_GATE' \

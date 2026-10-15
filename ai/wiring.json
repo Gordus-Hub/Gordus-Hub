@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "state": "PREPARED_NOT_RUNTIME_CERTIFIED",
+  "state": "ARGOS_TRANSLATE_WIRING_PREPARED_NOT_RUNTIME_CERTIFIED",
   "execution_policy": {
     "fail_closed": true,
     "stop_on_first_non_success": true,
@@ -22,32 +22,64 @@
   },
   "routes": {
     "translate": {
-      "steps": ["madlad400-3b-mt"],
-      "required_parameters": ["target_language"]
+      "steps": [
+        "argostranslate"
+      ],
+      "required_parameters": [
+        "source_language",
+        "target_language"
+      ]
     },
     "code_generation": {
-      "steps": ["qwen3-coder-30b-a3b-instruct"],
+      "steps": [
+        "qwen3-coder-30b-a3b-instruct"
+      ],
       "required_parameters": []
     },
     "classical_language_analysis": {
-      "steps": ["cltk"],
-      "required_parameters": ["language"]
+      "steps": [
+        "cltk"
+      ],
+      "required_parameters": [
+        "language"
+      ]
     },
     "specialist_ancient_language_analysis": {
-      "steps": ["heidelberg-ancient-language-models"],
-      "required_parameters": ["language", "artifact_scope"]
+      "steps": [
+        "heidelberg-ancient-language-models"
+      ],
+      "required_parameters": [
+        "language",
+        "artifact_scope"
+      ]
     },
     "evaluate_output": {
-      "steps": ["inspect-ai"],
-      "required_parameters": ["evaluation_suite_id"]
+      "steps": [
+        "inspect-ai"
+      ],
+      "required_parameters": [
+        "evaluation_suite_id"
+      ]
     },
     "translate_and_evaluate": {
-      "steps": ["madlad400-3b-mt", "inspect-ai"],
-      "required_parameters": ["target_language", "evaluation_suite_id"]
+      "steps": [
+        "argostranslate",
+        "inspect-ai"
+      ],
+      "required_parameters": [
+        "source_language",
+        "target_language",
+        "evaluation_suite_id"
+      ]
     },
     "code_and_evaluate": {
-      "steps": ["qwen3-coder-30b-a3b-instruct", "inspect-ai"],
-      "required_parameters": ["evaluation_suite_id"]
+      "steps": [
+        "qwen3-coder-30b-a3b-instruct",
+        "inspect-ai"
+      ],
+      "required_parameters": [
+        "evaluation_suite_id"
+      ]
     }
   }
 }

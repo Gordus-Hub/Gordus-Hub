@@ -1,21 +1,19 @@
 # Component difficulty and alternatives assessment
 
 **Record:** GH-AI-ALTERNATIVES-001  
-**State:** Research candidates only; not a release decision.  
-**Policy:** No canonical component is silently replaced, and no alternative weight download is authorized by this assessment.
+**State:** Argos Translate selected as active translation-library candidate; not runtime-certified.  
+**Policy:** Project direction replaces MADLAD in the active registry with Argos Translate. MADLAD quantized variants remain dormant fallbacks only.
 
 ## Finding
 
-The five registered components are not five model checkpoints. Inspect AI and CLTK are Python packages; MADLAD and Qwen3-Coder are pretrained model families; Heidelberg-NLP is research code linking separately hosted specialist checkpoints and external corpora.
-
-The principal weight-download blockers are Qwen3-Coder (about 61.1 GB for the original full snapshot) and MADLAD (11.8 GB for its primary original safetensors file). Heidelberg's major blocker is asset selection, per-asset licensing, separate data downloads and its Python 3.12 requirement—not one giant checkpoint.
+The active translation component is now Argos Translate, an offline Python library. Its wheel is about 41.6 KB, while language-pair packages average around 100 MB each. This reduces download burden for a narrow language matrix, but does not preserve MADLAD-400's advertised 419-language coverage. Qwen3-Coder remains the largest active weight blocker (about 61.1 GB original snapshot); Heidelberg's main issue is selecting and licensing task-required assets.
 
 ## Ranked assessment
 
 | Rank | Component | Why difficult | Recommended path |
 | ---: | --- | --- | --- |
 | 1 | Qwen3-Coder-30B-A3B-Instruct | About 61.1 GB original snapshot; substantial disk and RAM required. | First candidate: same-family Q4_K_M GGUF at about 18.557 GB. Needs a llama.cpp-compatible adapter and pinned quantization-repository revision. |
-| 2 | MADLAD-400-3B-MT | Primary safetensors file is 11,761,587,872 bytes. | First candidate: ONNX Runtime INT8 export at about 4.7 GB. Requires a new ONNX adapter and evaluation; public preliminary report shows exact-string agreement on only 8/12 sample translations. |
+| 2 | Argos Translate | Small Python wheel, but language-pair artifacts are separate and average around 100 MB; coverage is narrower than MADLAD's advertised 419 languages. | Active library candidate: pin `argostranslate==1.11.0`; approve only required pairs; verify each artifact hash/license and run translation quality tests. |
 | 3 | Heidelberg-NLP ancient-language-models | Research code is small, but real models and treebanks are fetched separately and have separate source/license conditions. Requires Python 3.12. | Acquire source at its pinned commit, then download only the models/resources needed for selected tasks. |
 | 4 | CLTK | Package, not one model. Dependency closure and language-specific data selection matter. | Keep current package, lock transitive dependencies and acquire selected language resources. Quantization does not apply. |
 | 5 | Inspect AI | Package, not a model. Package installation/import smoke test has passed. | Keep current package and pin its transitive dependencies. Quantization does not apply. |
@@ -34,9 +32,9 @@ The upstream full snapshot is approximately 61.1 GB. The reviewed public GGUF li
 
 Sources: [Qwen3-Coder base](https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct), [Qwen3-Coder GGUF candidates](https://huggingface.co/tensorblock/Qwen_Qwen3-Coder-30B-A3B-Instruct-GGUF), [Qwen2.5-Coder-7B Q4_K_M](https://huggingface.co/second-state/Qwen2.5-Coder-7B-Instruct-GGUF), [Qwen2.5-Coder-14B options](https://huggingface.co/Kj0rdan/Qwen2.5-Coder-Instruct-GGUF).
 
-## MADLAD-400
+## Dormant fallback: MADLAD-400 (not active in the registry)
 
-The upstream primary safetensors file is 11.8 GB. An ONNX export with INT8 dynamically quantized weights is advertised at about 4.7 GB. Its public comparison reports 8/12 exact-string matches against the PyTorch reference on selected sample translations. The deviations are described as synonym-level changes, but twelve samples are not enough to certify translation quality or broad language coverage.
+MADLAD remains a fallback if Argos does not cover the approved language matrix. It is not in the active acquisition order. The upstream primary safetensors file is 11.8 GB. An ONNX export with INT8 dynamically quantized weights is advertised at about 4.7 GB. Its public comparison reports 8/12 exact-string matches against the PyTorch reference on selected sample translations. The deviations are described as synonym-level changes, but twelve samples are not enough to certify translation quality or broad language coverage.
 
 Sources: [upstream checkpoint and SHA-256](https://huggingface.co/google/madlad400-3b-mt/blob/fa184c675da0b5c9e1c8694fccd4e12e2d422094/model.safetensors), [ONNX INT8 alternative](https://huggingface.co/TigreGotico/madlad400-3b-mt-onnx), [separate GGUF Q4 candidate](https://huggingface.co/cstr/madlad400-3b-mt-GGUF).
 
@@ -54,16 +52,16 @@ Quantization is not the first-line optimization: choose checkpoints by required 
 
 ## Integration consequences
 
-- Current wiring contracts do not automatically load GGUF or ONNX. Qwen GGUF needs a llama.cpp-compatible adapter/API; MADLAD ONNX INT8 needs an Optimum ONNX Runtime adapter.
+- The current wiring has a real Argos adapter, but blocks until `ai/translation/pairs.json` is approved and the requested direct-pair package is installed. Qwen GGUF needs a llama.cpp-compatible adapter/API; dormant MADLAD ONNX INT8 needs a separate adapter.
 - Keep canonical component IDs and store the quantization/file format as a versioned implementation profile. Never label a quantized checkpoint as the original full-precision artifact.
 - Every candidate needs an immutable repository revision, per-file SHA-256 manifest, license review, task-specific test suite, latency/memory/disk evidence, rollback pointer and explicit approval before activation.
-- The preferred same-family quantized weights for MADLAD and Qwen3-Coder sum to about 23.3 GB before dependencies, caches and Heidelberg assets. Use a confirmed larger GitHub-hosted runner with at least 60 GB free disk and around 64 GB RAM for conservative staging/load tests, or choose a smaller fallback and measure the capability tradeoff. Check actual disk/RAM before any download.
+- With Qwen Q4_K_M and two Argos language pairs, model payloads would be about 18.8 GB before dependencies/caches/Heidelberg assets. The active Qwen full snapshot remains about 61.1 GB until a smaller Qwen profile is approved. Use a confirmed larger GitHub-hosted runner with at least 60 GB free disk and around 64 GB RAM for conservative staging/load tests, or choose a smaller fallback and measure the capability tradeoff. Check actual disk/RAM before any download.
 - GitHub-hosted workspaces are ephemeral. A successful Actions download does not create persistent deployment; model files need an approved durable storage/deployment target or the job must be explicitly limited to ephemeral evaluation.
 
 ## Recommendation
 
 1. Keep Inspect AI and CLTK as current package candidates.
-2. Validate MADLAD ONNX INT8 as the translation compression candidate.
+2. Use Argos Translate as the active library; approve direct pairs (suggested pilot: es↔en), measure quality and verify each package. Keep MADLAD/ONNX dormant only if coverage requirements demand it.
 3. Validate Qwen3-Coder-30B-A3B Q4_K_M GGUF as the first coding compression candidate; retain Qwen2.5-Coder-7B Q4_K_M only as a lower-resource fallback if comparative coding tests meet the quality threshold.
 4. Download only Heidelberg checkpoints needed by configured tasks.
-5. Do not alter canonical model choices until alternatives pass quality, licensing, security, storage, adapter and rollback gates.
+5. Keep translation blocked until the pair allowlist and packages pass quality, licensing, security, storage, adapter and rollback gates.

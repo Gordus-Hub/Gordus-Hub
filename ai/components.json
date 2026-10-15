@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "Gordus-Hub/Gordus-Hub",
-  "state": "FOUNDATION_CANDIDATE_NOT_CERTIFIED",
+  "state": "ARGOS_TRANSLATION_LIBRARY_CANDIDATE_NOT_CERTIFIED",
   "policy": {
     "installation_mode": "isolated-venvs",
     "model_weight_downloads_in_ci": false,
@@ -28,27 +28,21 @@
       "scope": "evaluation framework only; not a certification authority"
     },
     {
-      "id": "madlad400-3b-mt",
-      "kind": "huggingface-model",
+      "id": "argostranslate",
+      "kind": "python-package",
       "priority": 1,
-      "source": "https://huggingface.co/google/madlad400-3b-mt",
-      "package": null,
-      "package_version": null,
-      "requirements_file": "ai/requirements/model-runtime.txt",
-      "revision": "fa184c675da0b5c9e1c8694fccd4e12e2d422094",
-      "expected_full_weight_file": {
-        "path": "model.safetensors",
-        "size_bytes": 11761587872,
-        "sha256": "66ff5f8fcaf92291da486fdfbd4d5233cec90e1359348a56e3172c978b3a76d4"
-      },
+      "source": "https://github.com/argosopentech/argos-translate",
+      "package": "argostranslate",
+      "package_version": "1.11.0",
+      "requirements_file": "ai/requirements/translation.txt",
       "license": {
-        "value": "Apache-2.0",
-        "status": "DECLARED_NOT_INDEPENDENTLY_AUDITED"
+        "value": "MIT OR CC0",
+        "status": "LIBRARY_LICENSE_DECLARED_MODEL_PACK_METADATA_REQUIRES_PER_ASSET_REVIEW"
       },
-      "installation_enabled": false,
-      "smoke_test": null,
-      "gate": "REVIEW_LICENSE_RESOURCE_BUDGET_BACKEND_AND_PERSISTENT_STORAGE",
-      "scope": "translation candidate; full safetensors weight download is 11.76 GB; snapshot/installation remains gated"
+      "installation_enabled": true,
+      "smoke_test": "import argostranslate, argostranslate.package, argostranslate.translate",
+      "language_package_registry": "ai/translation/pairs.json",
+      "scope": "offline Python translation library; the wheel is small, but each supported language direction needs a separate model package; do not claim MADLAD-equivalent 419-language coverage"
     },
     {
       "id": "qwen3-coder-30b-a3b-instruct",

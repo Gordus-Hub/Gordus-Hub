@@ -2,7 +2,7 @@
 
 **Record:** GH-AI-FOUNDATION-001
 **State:** candidate under validation; not a certified release
-**Scope:** installation foundations for Inspect AI, MADLAD-400, Qwen3-Coder, CLTK, and Heidelberg-NLP ancient-language-models.
+**Scope:** installation foundations for Inspect AI, Argos Translate, Qwen3-Coder, CLTK and Heidelberg-NLP ancient-language-models. Argos replaces MADLAD in the active registry; MADLAD remains dormant fallback only.
 
 ## Control separation
 
@@ -23,8 +23,8 @@ The route contract is stored in `ai/wiring.json` and documented in `ai/WIRING.md
 
 ## Explicit gates
 
-1. Pin immutable revisions for MADLAD and Qwen model repositories before weight acquisition.
-2. Select and pin the PyTorch/CPU/CUDA backend for the actual target runner; it is deliberately omitted from the shared model-library profile.
+1. Approve the Argos language-pair matrix, then pin/hash each `.argosmodel` before acquisition. MADLAD is no longer in the active acquisition order. Pin the immutable Qwen model source/profile before acquisition.
+2. Select and pin the Qwen CPU/GPU backend for the target runner. Argos uses CTranslate2 and only installed language pairs.
 3. Confirm model weight sizes against the actual disk and memory budget.
 4. Review the license of every downloaded model, dataset, tokenizer, corpus, and research artifact. The Heidelberg-NLP repository has no repository-level license reported by GitHub; acquisition remains blocked pending per-artifact review.
 5. Generate and review full transitive lockfiles before a production/runtime release. The current CI records resolved package sets as evidence but does not claim a hash-locked dependency closure.
@@ -39,4 +39,4 @@ A missing dependency pin, invalid component ID, unbounded model revision, failed
 
 ## Acquisition readiness audit
 
-The next phase is recorded in [`ai/ACQUISITION_READINESS.md`](../ai/ACQUISITION_READINESS.md) and `ai/acquisition.json`. Full model weights have not been downloaded. Immutable revisions have now been pinned, while execution remains blocked by the standard runner's disk limit, the lack of a persistent model-storage target, unhashed transitive dependency lockfiles, and separate licenses for Heidelberg-linked model/data artifacts. A successful package smoke test does not clear these gates.
+The next phase is recorded in [`ai/ACQUISITION_READINESS.md`](../ai/ACQUISITION_READINESS.md) and `ai/acquisition.json`. No Argos language-pair packages or full Qwen weights have been downloaded. Immutable revisions have now been pinned, while execution remains blocked by the standard runner's disk limit, the lack of a persistent model-storage target, unhashed transitive dependency lockfiles, and separate licenses for Heidelberg-linked model/data artifacts. A successful package smoke test does not clear these gates.

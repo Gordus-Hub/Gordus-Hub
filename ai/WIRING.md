@@ -8,12 +8,12 @@ This layer defines the stable connection points between the five registered comp
 
 | Task | Ordered route | Notes |
 | --- | --- | --- |
-| Translation | MADLAD-400 | Requires `target_language`; model revision, license, installation, and execution gates remain active. |
+| Translation | Argos Translate library + approved pair package | Requires `source_language` and `target_language`; pair package, SHA-256, license and language matrix must be approved. Automatic pivoting is disabled. |
 | Code generation | Qwen3-Coder | Output is treated as untrusted text. Generated code is never executed by this router. |
 | Classical-language analysis | CLTK | Requires `language`; corpora and task-specific resources are not downloaded automatically. |
 | Specialist ancient-language analysis | Heidelberg-NLP research component | Blocked until per-artifact licensing, resource/runtime, and adapter reviews pass. |
 | Independent evaluation | Inspect AI | Requires a registered `evaluation_suite_id`; evaluation evidence is not certification. |
-| Translation + evaluation | MADLAD-400 → Inspect AI | Stops at the first blocked or failed step. |
+| Translation + evaluation | Argos Translate → Inspect AI | Stops at the first blocked or failed step. |
 | Code generation + evaluation | Qwen3-Coder → Inspect AI | Stops at the first blocked or failed step. |
 
 The machine-readable source is `ai/wiring.json`. Route order is explicit; the runtime does not infer hidden dependencies or silently skip blocked steps.
@@ -22,10 +22,10 @@ The machine-readable source is `ai/wiring.json`. Route order is explicit; the ru
 
 - Requests are JSON objects with `request_id`, `task`, `text`, and optional `parameters`.
 - Adapters implement `preflight()` and `invoke(request, input_text)`; adapters are injected explicitly and must pass registry gates before invocation.
-- Default adapters are unavailable and fail closed. The current CI uses test-only fake adapters to test routes and evidence; it does not register fake adapters for real operation.
+- The CLI registers a real Argos adapter, but it fails closed until `ai/translation/pairs.json` has approved language pairs and corresponding direct-pair packages are installed. CI's fake adapters are test-only.
 - Evidence records input/output SHA-256, UTC step times, component identity, route order, previous component, status, and gate codes. Raw input is not copied into evidence records.
 - The CLI reads one JSON request from standard input and emits one JSON result. A blocked request exits with code 3, rejected input/configuration with code 2, execution failure with code 4, and success with code 0.
-- Model weights are never downloaded by this CLI. The default manifest blocks MADLAD and Qwen execution; the Heidelberg research component is license-gated. No inference is certified by the wiring tests.
+- Model weights and Argos language-pair packages are never downloaded by this CLI. Translation is blocked until the language-pair matrix is approved. Qwen execution remains blocked by its manifest gates; Heidelberg is license-gated. No inference is certified by the wiring tests.
 
 ## Local contract test
 
@@ -33,7 +33,7 @@ From the repository root with Python 3.13:
 
 ```bash
 PYTHONPATH=ai/runtime python -m unittest discover -s ai/runtime/tests -v
-printf '%s\n' '{"request_id":"local-check-1","task":"translate","text":"Hola","parameters":{"target_language":"en"}}' \
+printf '%s\n' '{"request_id":"local-check-1","task":"translate","text":"Hola","parameters":{"source_language":"es","target_language":"en"}}' \
   | PYTHONPATH=ai/runtime python -m gordus_ai.cli
 ```
 
@@ -41,4 +41,4 @@ The second command should emit `status=BLOCKED` in JSON and exit with code 3 unt
 
 ## What remains outside this phase
 
-Model-specific inference adapters, immutable model revisions, per-artifact license review, full transitive hash lockfiles, backend/precision selection, weight artifact manifests, task/evaluation suites, resource budgets, and end-to-end quality tests must be completed and reviewed before activating inference.
+Argos language-pair approval and package hashes, Qwen inference adapter and immutable model revision, per-artifact license review, full transitive hash lockfiles, backend/precision selection, weight artifact manifests, task/evaluation suites, resource budgets, and end-to-end quality tests must be completed and reviewed before activating inference.

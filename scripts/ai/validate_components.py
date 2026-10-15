@@ -15,7 +15,7 @@ from typing import Any
 
 EXPECTED_COMPONENTS = {
     "inspect-ai",
-    "madlad400-3b-mt",
+    "argostranslate",
     "qwen3-coder-30b-a3b-instruct",
     "cltk",
     "heidelberg-ancient-language-models",
@@ -64,7 +64,7 @@ def main() -> int:
     errors: list[str] = []
     pending_gates: list[dict[str, str]] = []
     pinned_requirements: dict[str, dict[str, str]] = {}
-    evidence_files = ["ai/components.json", "ai/acquisition.json"]
+    evidence_files = ["ai/components.json", "ai/acquisition.json", "ai/translation/pairs.json"]
 
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -107,7 +107,7 @@ def main() -> int:
 
     expected_order = [
         "inspect-ai",
-        "madlad400-3b-mt",
+        "argostranslate",
         "qwen3-coder-30b-a3b-instruct",
         "cltk",
         "heidelberg-ancient-language-models",
@@ -142,7 +142,6 @@ def main() -> int:
         if isinstance(component, dict) and isinstance(component.get("id"), str)
     }
     pinned_comparisons = [
-        ("madlad400-3b-mt", "madlad400_3b_mt"),
         ("qwen3-coder-30b-a3b-instruct", "qwen3_coder_30b_a3b_instruct"),
         ("heidelberg-ancient-language-models", "heidelberg_ancient_language_models"),
     ]
@@ -155,6 +154,54 @@ def main() -> int:
         revision = source_pin.get("revision")
         if component.get("revision") != revision or not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{40}", revision):
             errors.append(f"acquisition and component manifest revisions must match for {component_id}")
+
+    argos_pin = source_pins.get("argostranslate")
+    argos_component = component_by_id.get("argostranslate")
+    if not isinstance(argos_pin, dict) or not isinstance(argos_component, dict):
+        errors.append("Argos Translate package pin and component registration are required")
+    elif argos_pin.get("package_version") != argos_component.get("package_version"):
+        errors.append("Argos Translate acquisition version must match component manifest")
+
+    pair_registry_path = root / "ai" / "translation" / "pairs.json"
+    try:
+        pair_registry = json.loads(pair_registry_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        errors.append(f"unable to read Argos language-pair registry: {exc}")
+        pair_registry = {}
+    if pair_registry.get("schema_version") != 1:
+        errors.append("unsupported Argos language-pair registry schema_version")
+    pair_policy = pair_registry.get("policy")
+    if not isinstance(pair_policy, dict) or pair_policy.get("fail_closed") is not True:
+        errors.append("Argos language-pair registry must be fail-closed")
+    if isinstance(pair_policy, dict) and pair_policy.get("model_package_downloads_enabled") is not False:
+        errors.append("Argos model-package downloads must remain disabled until pair approval")
+    approved_pairs = pair_registry.get("approved_language_pairs")
+    if not isinstance(approved_pairs, list):
+        errors.append("approved_language_pairs must be a list")
+        approved_pairs = []
+    if not approved_pairs:
+        pending_gates.append({"component": "argostranslate", "gate": "LANGUAGE_PAIR_MATRIX_NOT_APPROVED"})
+    seen_pairs = set()
+    for pair in approved_pairs:
+        if not isinstance(pair, dict):
+            errors.append("each approved Argos language pair must be an object")
+            continue
+        source_code, target_code = pair.get("source_language"), pair.get("target_language")
+        if not isinstance(source_code, str) or not source_code or not isinstance(target_code, str) or not target_code:
+            errors.append("approved Argos language pairs need source_language and target_language")
+            continue
+        key = (source_code, target_code)
+        if key in seen_pairs:
+            errors.append(f"duplicate approved Argos language pair: {source_code}->{target_code}")
+        seen_pairs.add(key)
+        for field in ("package_version", "download_url", "artifact_sha256", "artifact_size_bytes", "license_status"):
+            if field not in pair:
+                errors.append(f"approved Argos pair {source_code}->{target_code} missing {field}")
+        digest = pair.get("artifact_sha256")
+        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
+            errors.append(f"approved Argos pair {source_code}->{target_code} needs a SHA-256")
+        if pair.get("license_status") != "VERIFIED":
+            errors.append(f"approved Argos pair {source_code}->{target_code} needs VERIFIED license status")
 
     for gate in acquisition.get("required_gates", []):
         if isinstance(gate, str):
