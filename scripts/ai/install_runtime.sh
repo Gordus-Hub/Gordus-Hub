@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Controlled persistent runtime activation. This script does not acquire language/model data.
 set -Eeuo pipefail
+umask 077
 
 ROOT="${1:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)}"
 PYTHON="${PYTHON:-python3.13}"
@@ -37,6 +38,21 @@ PY
 RELEASE_SHA="${GORDUS_AI_RELEASE_SHA:-}"
 [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] ||
   deny 43 "GORDUS_AI_RELEASE_SHA_MUST_BE_A_40_CHAR_COMMIT_SHA"
+
+# Bind the runtime directory to the exact source revision. A source checkout is
+# verified directly; a minimal OCI image must carry its source SHA as build metadata.
+ACTUAL_GIT_SHA=""
+if command -v git >/dev/null 2>&1; then
+  ACTUAL_GIT_SHA="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
+fi
+SOURCE_SHA="${GORDUS_AI_SOURCE_SHA:-$ACTUAL_GIT_SHA}"
+[[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] ||
+  deny 59 "TRUSTED_SOURCE_COMMIT_SHA_MISSING"
+[[ "$RELEASE_SHA" == "$SOURCE_SHA" ]] ||
+  deny 60 "RELEASE_SHA_DIFFERS_FROM_TRUSTED_SOURCE_SHA"
+if [[ -n "$ACTUAL_GIT_SHA" && "$SOURCE_SHA" != "$ACTUAL_GIT_SHA" ]]; then
+  deny 61 "EMBEDDED_SOURCE_SHA_DIFFERS_FROM_CHECKED_OUT_GIT_HEAD"
+fi
 
 command -v "$PYTHON" >/dev/null 2>&1 || deny 44 "PYTHON_313_NOT_FOUND"
 "$PYTHON" - <<'PY'
@@ -79,8 +95,11 @@ fi
 
 # Validator checks direct-pin consistency and the committed lock's hashes.
 PREFLIGHT_TMP="$(mktemp)"
-"$PYTHON" "$ROOT/scripts/ai/validate_components.py" \
-  --repo-root "$ROOT" --report "$PREFLIGHT_TMP"
+if ! "$PYTHON" "$ROOT/scripts/ai/validate_components.py" \
+  --repo-root "$ROOT" --report "$PREFLIGHT_TMP"; then
+  rm -f "$PREFLIGHT_TMP"
+  deny 62 "RUNTIME_PREFLIGHT_FAILED"
+fi
 mkdir -p "$DATA_ROOT/venvs" "$REPORT_DIR"
 cp "$PREFLIGHT_TMP" "$REPORT_DIR/preflight-$RELEASE_SHA.json"
 rm -f "$PREFLIGHT_TMP"
@@ -93,6 +112,10 @@ SWITCHED=0
 on_exit() {
   status=$?
   trap - EXIT
+  if [[ "$status" -ne 0 && "$SWITCHED" -ne 1 && -n "${STAGING:-}" && -d "$STAGING" ]]; then
+    rm -rf -- "$STAGING"
+    printf 'CLEANUP=FAILED_STAGING_REMOVED\n' >&2
+  fi
   if [[ "$status" -ne 0 && "$SWITCHED" -eq 1 ]]; then
     if [[ -n "$PREVIOUS_TARGET" ]]; then
       restore="$DATA_ROOT/venvs/.current-restore-$$"

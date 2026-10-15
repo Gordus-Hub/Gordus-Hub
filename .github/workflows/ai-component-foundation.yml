@@ -77,7 +77,7 @@ jobs:
           python -c 'import json, pathlib, os; p=json.loads(pathlib.Path(os.environ["RUNNER_TEMP"] + "/gordus-ai-evidence/wiring-dry-run.json").read_text()); assert p["status"] == "BLOCKED"; assert p["certification"] == "NOT_GRANTED"; assert p["model_weights_downloaded"] is False; print("Fail-closed wiring CLI: PASS")'
 
       - name: Build and check isolated Debian 13 AI runtime image
-        run: docker build --pull --file ai/runtime/Dockerfile --tag gordus-ai-debian13:ci .
+        run: docker build --pull --build-arg GORDUS_AI_SOURCE_SHA="$GITHUB_SHA" --file ai/runtime/Dockerfile --tag gordus-ai-debian13:ci .
 
       - name: Run preflight in Debian 13 image
         shell: bash
