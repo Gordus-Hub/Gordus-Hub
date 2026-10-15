@@ -1,10 +1,16 @@
 {
   "schema_version": 1,
-  "state": "THREE_LIBRARY_WIRING_PENDING_USER_INSTALL_APPROVAL",
+  "state": "THREE_LIBRARY_PERSISTENT_INSTALL_AUTHORIZED_NOT_PERFORMED",
   "policy": {
     "fail_closed": true,
     "install_library_packages_in_ci_temporary_venvs": true,
-    "persistent_installation_authorized": false,
+    "persistent_installation_authorized": true,
+    "reviewed_runtime_hash_lock_approved": true,
+    "persistent_installation_requires_hash_locked_runtime": true,
+    "persistent_installation_requires_mounted_data_volume": true,
+    "persistent_installation_requires_per_run_approval": true,
+    "runtime_activation_is_atomic": true,
+    "rollback_required": true,
     "install_user_host_packages": false,
     "download_argos_language_packs": false,
     "download_cltk_language_resources": false,
@@ -30,13 +36,38 @@
       "requirements": "ai/requirements/inspect-ai.txt"
     }
   ],
+  "runtime_input_file": "ai/requirements/runtime.in",
+  "runtime_lock_file": "ai/requirements/locks/runtime-py313-linux-x86_64.txt",
   "persistent_data_root": "/var/lib/gordus-ai",
   "pending_gates": [
-    "user_approval_for_persistent_library_installation",
+    "validate_dedicated_persistent_data_volume_and_permissions",
     "approve_and_hash_each_required_argos_language_direction_package",
     "select_and_approve_CLTK_language_resources_and_treebanks",
     "define_and_review_Inspect_AI_evaluation_suites",
-    "produce_reviewed_hash_locked_transitive_dependency_lockfiles",
-    "run_task_level_translation_linguistics_and_evaluation_quality_tests"
-  ]
+    "run_task_level_translation_linguistics_and_evaluation_quality_tests",
+    "execute_persistent_installation_on_approved_debian13_target",
+    "supply_explicit_per_run_install_approval",
+    "verify_mounted_persistent_volume_and_permissions",
+    "run_post_activation_validation_and_confirm_rollback_checkpoint"
+  ],
+  "runtime_lock_review": {
+    "status": "APPROVED_FOR_PINNED_INSTALLABILITY_ONLY",
+    "reviewed_file": "ai/requirements/locks/runtime-py313-linux-x86_64.txt",
+    "github_blob_sha1": "cd20bb6945cd71b34fcbdd57b404ea7c61b7bcb7",
+    "evidence_commit": "1298c5ada3bd7fbd9a64084f83381b252f637a7d",
+    "evidence_workflow_run": "https://github.com/Gordus-Hub/Gordus-Hub/actions/runs/38756256593",
+    "review_scope": [
+      "CPython 3.13/Linux x86_64 committed lock",
+      "SHA-256 hash-enforced dependency installation",
+      "direct-version pin parity",
+      "pip check, exact-version/import checks and CPU-only PyTorch check",
+      "runtime contract tests within disposable CI environment"
+    ],
+    "explicit_limits": [
+      "not task-quality certification",
+      "not system-Python installation authorization",
+      "does not authorize Argos packs, CLTK corpora/resources, Inspect AI suite execution or model weights",
+      "does not substitute for post-install validation on the actual persistent target"
+    ]
+  }
 }

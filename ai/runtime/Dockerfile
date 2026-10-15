@@ -1,14 +1,22 @@
 FROM debian:13-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
+ARG GORDUS_AI_SOURCE_SHA=UNBOUND
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
+ARG GORDUS_AI_LOCK_SHA256=UNBOUND
+
+ENV GORDUS_AI_SOURCE_SHA=${GORDUS_AI_SOURCE_SHA} \
+    GORDUS_AI_LOCK_SHA256=${GORDUS_AI_LOCK_SHA256} \
+    PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
+    PATH="/opt/gordus-ai-venv/bin:${PATH}" \
+    PYTHONPATH="/opt/gordus-ai/ai/runtime" \
     GORDUS_AI_DATA_ROOT=/var/lib/gordus-ai \
     ARGOS_PACKAGE_DIR=/var/lib/gordus-ai/argos-packages \
-    STANZA_RESOURCES_DIR=/var/lib/gordus-ai/stanza_resources
+    STANZA_RESOURCES_DIR=/var/lib/gordus-ai/stanza_resources \
+    GORDUS_AI_RUNTIME_SCOPE=THREE_PYTHON_LIBRARIES_INSTALLED_TASK_ASSETS_SEPARATELY_GATED
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -24,8 +32,23 @@ RUN groupadd --system ai \
 WORKDIR /opt/gordus-ai
 COPY ai /opt/gordus-ai/ai
 COPY scripts/ai /opt/gordus-ai/scripts/ai
-RUN chown -R root:root /opt/gordus-ai \
-    && chmod -R a=rX /opt/gordus-ai
+LABEL org.opencontainers.image.source="https://github.com/Gordus-Hub/Gordus-Hub" \
+      org.opencontainers.image.title="Gordus AI three-library Python runtime" \
+      org.gordus.ai.runtime.lock.sha256="${GORDUS_AI_LOCK_SHA256}"
+
+# Materialize all three pinned libraries and every hash-locked transitive dependency
+# in this reusable image. No packages are installed on the user's host and no
+# language/model/evaluation assets are acquired at build time.
+RUN test "${GORDUS_AI_LOCK_SHA256}" != "UNBOUND" \
+    && printf '%s  %s\n' "${GORDUS_AI_LOCK_SHA256}" "ai/requirements/locks/runtime-py313-linux-x86_64.txt" | sha256sum --check - \
+    && python3.13 -m venv /opt/gordus-ai-venv \
+    && /opt/gordus-ai-venv/bin/python -m pip install --no-input --disable-pip-version-check --no-cache-dir --require-hashes -r ai/requirements/locks/runtime-py313-linux-x86_64.txt \
+    && /opt/gordus-ai-venv/bin/python -m pip check \
+    && /opt/gordus-ai-venv/bin/python scripts/ai/verify_installed_libraries.py \
+    && /opt/gordus-ai-venv/bin/inspect --version \
+    && /opt/gordus-ai-venv/bin/python -m unittest discover -s ai/runtime/tests -v \
+    && chown -R root:root /opt/gordus-ai /opt/gordus-ai-venv \
+    && chmod -R a=rX /opt/gordus-ai /opt/gordus-ai-venv
 
 USER ai
 WORKDIR /opt/gordus-ai

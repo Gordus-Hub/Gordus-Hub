@@ -1,2 +1,5 @@
-# CLTK with its local Stanza backend dependency; language-specific models/corpora remain separate assets.
+# CLTK with local Stanza backend; linguistic resources remain separate approved assets.
+# Include CPU-only PyTorch explicitly to avoid unnecessary CUDA/NVIDIA runtime dependencies.
 cltk[stanza]==2.5.1
+setuptools==84.0.0
+torch==2.14.1+cpu

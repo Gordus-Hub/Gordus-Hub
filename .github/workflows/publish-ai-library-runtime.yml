@@ -1,0 +1,184 @@
+name: Build and publish verified three-library runtime image
+
+on:
+  push:
+    branches:
+      - main
+      - refactor/three-library-wiring-2026-10-15
+    paths:
+      - "ai/runtime/Dockerfile"
+      - "ai/runtime/**"
+      - "ai/requirements/**"
+      - "scripts/ai/**"
+      - ".github/workflows/publish-ai-library-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ai-library-runtime-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-verify-publish:
+    name: Build, verify, and publish the installed library runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout the exact source revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # pinned v4 tag
+        with:
+          persist-credentials: false
+
+      - name: Calculate runtime lock fingerprint and image tags
+        id: metadata
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          lock="ai/requirements/locks/runtime-py313-linux-x86_64.txt"
+          test -s "$lock"
+          LOCK_SHA256="$(sha256sum "$lock" | awk '{print $1}')"
+          OWNER_LC="${GITHUB_REPOSITORY_OWNER,,}"
+          IMAGE="ghcr.io/$OWNER_LC/gordus-hub-ai-runtime"
+          SHA_TAG="$IMAGE:$GITHUB_SHA"
+          if [[ "$GITHUB_REF_NAME" == "main" ]]; then
+            CHANNEL_TAG="$IMAGE:stable"
+          else
+            CHANNEL_TAG="$IMAGE:three-library-candidate"
+          fi
+          {
+            echo "lock_sha256=$LOCK_SHA256"
+            echo "image=$IMAGE"
+            echo "sha_tag=$SHA_TAG"
+            echo "channel_tag=$CHANNEL_TAG"
+          } >> "$GITHUB_OUTPUT"
+          mkdir -p "$RUNNER_TEMP/gordus-ai-image-evidence"
+          printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/gordus-ai-image-evidence/source-commit.txt"
+          printf '%s\n' "$LOCK_SHA256" > "$RUNNER_TEMP/gordus-ai-image-evidence/runtime-lock.sha256"
+
+      - name: Build Debian 13 image with the complete hash-locked package set
+        shell: bash
+        env:
+          LOCK_SHA256: ${{ steps.metadata.outputs.lock_sha256 }}
+          SHA_TAG: ${{ steps.metadata.outputs.sha_tag }}
+          CHANNEL_TAG: ${{ steps.metadata.outputs.channel_tag }}
+        run: |
+          set -Eeuo pipefail
+          docker build --pull \
+            --file ai/runtime/Dockerfile \
+            --build-arg "GORDUS_AI_SOURCE_SHA=$GITHUB_SHA" \
+            --build-arg "GORDUS_AI_LOCK_SHA256=$LOCK_SHA256" \
+            --tag "$SHA_TAG" \
+            --tag "$CHANNEL_TAG" \
+            .
+
+      - name: Re-run installed-library verification inside the built image
+        shell: bash
+        env:
+          SHA_TAG: ${{ steps.metadata.outputs.sha_tag }}
+        run: |
+          set -Eeuo pipefail
+          docker run --rm "$SHA_TAG" /bin/bash -c \
+            'set -Eeuo pipefail; python scripts/ai/verify_installed_libraries.py; inspect --version; python -m unittest discover -s ai/runtime/tests -v' \
+            2>&1 | tee "$RUNNER_TEMP/gordus-ai-image-evidence/container-verification.log"
+          test -s "$RUNNER_TEMP/gordus-ai-image-evidence/container-verification.log"
+          docker image inspect "$SHA_TAG" --format '{{json .Config.Labels}}' \
+            > "$RUNNER_TEMP/gordus-ai-image-evidence/image-labels.json"
+          docker image inspect "$SHA_TAG" --format '{{.Size}}' \
+            > "$RUNNER_TEMP/gordus-ai-image-evidence/image-size-bytes.txt"
+
+      - name: Authenticate to GitHub Container Registry
+        shell: bash
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+      - name: Publish commit-addressed image and branch channel
+        id: publish
+        shell: bash
+        env:
+          SHA_TAG: ${{ steps.metadata.outputs.sha_tag }}
+          CHANNEL_TAG: ${{ steps.metadata.outputs.channel_tag }}
+        run: |
+          set -Eeuo pipefail
+          docker push "$SHA_TAG" 2>&1 | tee "$RUNNER_TEMP/gordus-ai-image-evidence/push-commit-tag.log"
+          docker push "$CHANNEL_TAG" 2>&1 | tee "$RUNNER_TEMP/gordus-ai-image-evidence/push-channel-tag.log"
+          # Pull the registry manifest by its immutable source-SHA tag and hash its raw bytes.
+          REGISTRY_MANIFEST_SHA256="$(docker buildx imagetools inspect --raw "$SHA_TAG" | sha256sum | awk '{print $1}')"
+          test "${#REGISTRY_MANIFEST_SHA256}" -eq 64
+          echo "manifest_digest=sha256:$REGISTRY_MANIFEST_SHA256" >> "$GITHUB_OUTPUT"
+          printf 'sha256:%s\n' "$REGISTRY_MANIFEST_SHA256" \
+            > "$RUNNER_TEMP/gordus-ai-image-evidence/registry-manifest.digest"
+
+      - name: Write operational installation record
+        shell: bash
+        env:
+          IMAGE: ${{ steps.metadata.outputs.image }}
+          SHA_TAG: ${{ steps.metadata.outputs.sha_tag }}
+          CHANNEL_TAG: ${{ steps.metadata.outputs.channel_tag }}
+          LOCK_SHA256: ${{ steps.metadata.outputs.lock_sha256 }}
+          MANIFEST_DIGEST: ${{ steps.publish.outputs.manifest_digest }}
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import platform
+          import sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          out = Path(os.environ["RUNNER_TEMP"]) / "gordus-ai-image-evidence" / "installation-record.json"
+          record = {
+              "record_type": "GORDUS_AI_THREE_LIBRARY_IMAGE_PUBLICATION",
+              "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+              "result": "PASS_IMAGE_BUILT_VERIFIED_AND_PUBLISHED",
+              "certification": "NOT_GRANTED",
+              "host_mutation_performed": False,
+              "source_repository": os.environ["GITHUB_REPOSITORY"],
+              "source_commit": os.environ["GITHUB_SHA"],
+              "workflow_run_id": os.environ["GITHUB_RUN_ID"],
+              "workflow_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+              "registry": "ghcr.io",
+              "image": os.environ["IMAGE"],
+              "immutable_source_sha_tag": os.environ["SHA_TAG"],
+              "channel_tag": os.environ["CHANNEL_TAG"],
+              "registry_manifest_digest": os.environ["MANIFEST_DIGEST"],
+              "runtime_lock_path": "ai/requirements/locks/runtime-py313-linux-x86_64.txt",
+              "runtime_lock_sha256": os.environ["LOCK_SHA256"],
+              "target_image_os": "Debian 13",
+              "target_python": "CPython 3.13",
+              "installed_direct_libraries": {
+                  "argostranslate": "1.11.0",
+                  "cltk": "2.5.1",
+                  "inspect-ai": "0.3.280"
+              },
+              "installation_location": "reusable_GHCR_container_image_virtualenv",
+              "pip_check": "PASS",
+              "exact_version_and_import_checks": "PASS",
+              "runtime_contract_tests": "PASS",
+              "argos_language_packs_included": False,
+              "cltk_corpora_or_language_resources_included": False,
+              "inspect_ai_evaluation_suites_executed": False,
+              "model_weights_included": False,
+              "task_quality_certification": "NOT_GRANTED"
+          }
+          out.write_text(json.dumps(record, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print(out.read_text(encoding="utf-8"), end="")
+          PY
+
+      - name: Upload installation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # pinned v4 tag
+        with:
+          name: gordus-ai-runtime-install-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gordus-ai-image-evidence/
+          if-no-files-found: error
+          retention-days: 90

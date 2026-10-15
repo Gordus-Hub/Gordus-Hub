@@ -43,3 +43,27 @@ A clean CI run may certify the registry/routes, static contracts, safe blocked s
 ## 6. Rollback and approval
 
 Rollback is a Git revert of the cleanup commit/PR; main is not changed by this branch. Review the diff and CI evidence before merging. Separate explicit approval is required before installing the three packages and approved data assets in the persistent runtime.
+
+
+## 7. Operational authorization addendum — 2026-10-15
+
+This append-only addendum updates the operational state without rewriting the original historical audit disposition. The user has explicitly authorized installation of the three pinned Python libraries and hash-locked transitive dependencies into the dedicated, versioned virtual environment under `/var/lib/gordus-ai`. System Python modification, Argos language packs, CLTK corpora/resources, model weights, and Inspect AI suite execution remain outside this authorization.
+
+The committed lock was reviewed for **pinned installability only**: CPython 3.13/Linux x86_64 target, direct-pin parity, SHA-256 hash enforcement, successful `pip check`, exact-version/import checks, CPU-only PyTorch dependency profile, and runtime contract tests in [CI run 38756256593](https://github.com/Gordus-Hub/Gordus-Hub/actions/runs/38756256593). Reviewed lock: `ai/requirements/locks/runtime-py313-linux-x86_64.txt`; GitHub blob SHA-1: `cd20bb6945cd71b34fcbdd57b404ea7c61b7bcb7`. This review is not task-quality certification, independent installation verification, licensing certification, translation/linguistic quality validation, or evaluation certification.
+
+**Execution result for this session:** `PERSISTENT_INSTALLATION_NOT_PERFORMED`. Device inventory reports no online Desktop Commander target and the connected DigitalOcean account reports no droplets. The actual Debian 13/Python 3.13 target and explicitly mounted, writable `/var/lib/gordus-ai` could not be inspected or changed. No successful persistent installation is claimed. The installer remains fail-closed unless its per-run approval and target prerequisites are met. Language/resource/suite registries remain closed and certification remains `NOT_GRANTED`.
+
+
+## 8. Verified package installation addendum — 2026-10-15T17:39Z
+
+This addendum supersedes Section 7 only as to the status of the **three Python library packages**. The earlier `PERSISTENT_INSTALLATION_NOT_PERFORMED` result described the optional host-volume installer under `/var/lib/gordus-ai`; that installer was not used. The library packages have since been installed into the reusable container image in GitHub Container Registry.
+
+- Workflow: [38778694922](https://github.com/Gordus-Hub/Gordus-Hub/actions/runs/38778694922), `SUCCESS`.
+- Immutable image: `ghcr.io/gordus-hub/gordus-hub-ai-runtime:59061c1d9ff950e1362711e2d1af72437604b433`.
+- Candidate channel: `ghcr.io/gordus-hub/gordus-hub-ai-runtime:three-library-candidate`.
+- Registry manifest: `sha256:e89f6a753ad504f7d692c299497028cb107d37998b233ab5073fd063400921f0`.
+- Lock SHA-256: `b35c25e249098b03462526d19f0f8b5b3a853169a912c8a875f76f351a3d94e7`.
+- Verified direct package versions: Argos Translate 1.11.0, CLTK 2.5.1, Inspect AI 0.3.280.
+- Evidence: hash-locked installation, `pip check`, exact-version/import tests, CPU-only PyTorch check, Inspect CLI version and all 12 runtime contract tests passed; GHCR push for both tags and registry manifest digest retrieval passed. Installation report artifact: [11994089131](https://github.com/Gordus-Hub/Gordus-Hub/actions/runs/38778694922/artifacts/11994089131).
+
+No user computer was accessed or modified. Argos language-pair model files, CLTK corpora/resources, Inspect AI evaluation suites and model weights remain separately gated and were not included in this package-install operation. Accordingly package installation is `PASS`; task-quality certification remains `NOT_GRANTED`.

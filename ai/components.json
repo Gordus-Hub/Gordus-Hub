@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
   "project": "Gordus-Hub/Gordus-Hub",
-  "state": "THREE_LIBRARY_WIRING_CANDIDATE_NOT_RUNTIME_CERTIFIED",
+  "state": "THREE_LIBRARY_INSTALL_AUTHORIZED_NOT_ACTIVATED",
   "policy": {
     "installation_mode": "isolated-venvs",
     "fail_closed": true,
     "evidence_required": true,
     "mutable_package_versions_allowed": false,
-    "persistent_installation_authorized": false,
+    "persistent_installation_authorized": true,
     "model_weight_downloads_in_ci": false,
     "model_execution_authorized": false,
     "argos_language_package_downloads_in_ci": false,
