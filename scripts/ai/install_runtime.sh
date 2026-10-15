@@ -75,6 +75,8 @@ FINAL="$DATA_ROOT/venvs/runtime-$RELEASE_SHA"
 REPORT_DIR="$DATA_ROOT/evaluations"
 REPORT="$REPORT_DIR/runtime-install-$RELEASE_SHA.json"
 FREEZE="$REPORT_DIR/runtime-freeze-$RELEASE_SHA.txt"
+PREFLIGHT_REPORT="$REPORT_DIR/preflight-$RELEASE_SHA.json"
+POST_REPORT="$REPORT_DIR/post-activation-$RELEASE_SHA.json"
 CURRENT_NEW="$DATA_ROOT/venvs/.current-new-${BASHPID}"
 RESTORE_LINK="$DATA_ROOT/venvs/.current-restore-${BASHPID}"
 
@@ -95,7 +97,7 @@ for managed_dir in "$DATA_ROOT/venvs" "$REPORT_DIR"; do
 done
 [[ -f "$LOCKFILE" ]] || deny 51 "COMMITTED_HASH_LOCK_MISSING"
 [[ ! -e "$FINAL" && ! -L "$FINAL" ]] || deny 52 "RELEASE_RUNTIME_ALREADY_EXISTS_REFUSING_OVERWRITE"
-[[ ! -e "$REPORT" && ! -e "$FREEZE" ]] || deny 53 "RELEASE_EVIDENCE_ALREADY_EXISTS_REFUSING_OVERWRITE"
+[[ ! -e "$REPORT" && ! -L "$REPORT" && ! -e "$FREEZE" && ! -L "$FREEZE" && ! -e "$PREFLIGHT_REPORT" && ! -L "$PREFLIGHT_REPORT" && ! -e "$POST_REPORT" && ! -L "$POST_REPORT" ]] || deny 53 "RELEASE_EVIDENCE_ALREADY_EXISTS_REFUSING_OVERWRITE"
 if [[ -e "$CURRENT" && ! -L "$CURRENT" ]]; then
   deny 54 "CURRENT_RUNTIME_MUST_BE_A_SYMLINK_FOR_ATOMIC_ACTIVATION"
 fi
@@ -119,7 +121,7 @@ if ! "$PYTHON" "$ROOT/scripts/ai/validate_components.py" \
   deny 62 "RUNTIME_PREFLIGHT_FAILED"
 fi
 mkdir -p "$DATA_ROOT/venvs" "$REPORT_DIR"
-cp "$PREFLIGHT_TMP" "$REPORT_DIR/preflight-$RELEASE_SHA.json"
+cp --no-clobber -- "$PREFLIGHT_TMP" "$PREFLIGHT_REPORT"
 rm -f "$PREFLIGHT_TMP"
 
 STAGING="$DATA_ROOT/venvs/.runtime-$RELEASE_SHA.staging-${BASHPID}"
@@ -237,7 +239,7 @@ set +e
 printf '%s\n' '{"request_id":"post-activation-preflight","task":"translate","text":"probe","parameters":{"source_language":"es","target_language":"en"}}' \
   | PYTHONPATH="$ROOT/ai/runtime" "$CURRENT/bin/python" -m gordus_ai.cli \
       --manifest "$ROOT/ai/components.json" --wiring "$ROOT/ai/wiring.json" \
-      > "$REPORT_DIR/post-activation-$RELEASE_SHA.json"
+      > "$POST_REPORT"
 post_status=$?
 set -e
 [[ "$post_status" -eq 3 ]] || deny 58 "POST_ACTIVATION_FAIL_CLOSED_CHECK_FAILED"
