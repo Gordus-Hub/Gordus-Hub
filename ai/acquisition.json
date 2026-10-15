@@ -49,7 +49,7 @@
   },
   "resource_gate": {
     "observed_standard_runner_ssd_gib": 14,
-    "minimum_free_disk_bytes_before_any_weight_download": 110000000000,
+    "minimum_free_disk_bytes": 110000000000,
     "recommended_ram_gib_for_full_checkpoint_load_tests": 128,
     "reason": "MADLAD full safetensors file is 11.76 GB; Qwen complete snapshot is about 61.1 GB; neither is persistently available from a disposable Actions workspace."
   },
