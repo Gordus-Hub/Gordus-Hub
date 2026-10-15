@@ -50,8 +50,12 @@ SOURCE_SHA="${GORDUS_AI_SOURCE_SHA:-$ACTUAL_GIT_SHA}"
   deny 59 "TRUSTED_SOURCE_COMMIT_SHA_MISSING"
 [[ "$RELEASE_SHA" == "$SOURCE_SHA" ]] ||
   deny 60 "RELEASE_SHA_DIFFERS_FROM_TRUSTED_SOURCE_SHA"
-if [[ -n "$ACTUAL_GIT_SHA" && "$SOURCE_SHA" != "$ACTUAL_GIT_SHA" ]]; then
-  deny 61 "EMBEDDED_SOURCE_SHA_DIFFERS_FROM_CHECKED_OUT_GIT_HEAD"
+if [[ -n "$ACTUAL_GIT_SHA" ]]; then
+  [[ "$SOURCE_SHA" == "$ACTUAL_GIT_SHA" ]] ||
+    deny 61 "EMBEDDED_SOURCE_SHA_DIFFERS_FROM_CHECKED_OUT_GIT_HEAD"
+  if [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=all)" ]]; then
+    deny 63 "SOURCE_CHECKOUT_NOT_CLEAN"
+  fi
 fi
 
 command -v "$PYTHON" >/dev/null 2>&1 || deny 44 "PYTHON_313_NOT_FOUND"
@@ -79,6 +83,14 @@ FREEZE="$REPORT_DIR/runtime-freeze-$RELEASE_SHA.txt"
 command -v mountpoint >/dev/null 2>&1 || deny 48 "MOUNTPOINT_CHECK_UNAVAILABLE"
 mountpoint -q "$DATA_ROOT" || deny 49 "PERSISTENT_DATA_ROOT_MUST_BE_AN_EXPLICIT_MOUNT"
 [[ -w "$DATA_ROOT" ]] || deny 50 "PERSISTENT_DATA_ROOT_NOT_WRITABLE_BY_AI_USER"
+
+# Prevent a pre-existing symlink from redirecting runtime/evidence writes outside
+# the approved persistent-volume hierarchy.
+for managed_dir in "$DATA_ROOT/venvs" "$REPORT_DIR"; do
+  [[ ! -L "$managed_dir" ]] || deny 64 "MANAGED_RUNTIME_DIRECTORY_MUST_NOT_BE_A_SYMLINK"
+  [[ ! -e "$managed_dir" || -d "$managed_dir" ]] ||
+    deny 65 "MANAGED_RUNTIME_PATH_EXISTS_BUT_IS_NOT_A_DIRECTORY"
+done
 [[ -f "$LOCKFILE" ]] || deny 51 "COMMITTED_HASH_LOCK_MISSING"
 [[ ! -e "$FINAL" && ! -L "$FINAL" ]] || deny 52 "RELEASE_RUNTIME_ALREADY_EXISTS_REFUSING_OVERWRITE"
 [[ ! -e "$REPORT" && ! -e "$FREEZE" ]] || deny 53 "RELEASE_EVIDENCE_ALREADY_EXISTS_REFUSING_OVERWRITE"
@@ -89,6 +101,10 @@ if [[ -L "$CURRENT" ]]; then
   PREVIOUS_TARGET="$(readlink -f "$CURRENT" || true)"
   [[ -n "$PREVIOUS_TARGET" && -d "$PREVIOUS_TARGET" ]] ||
     deny 55 "CURRENT_RUNTIME_SYMLINK_TARGET_INVALID"
+  case "$PREVIOUS_TARGET" in
+    "$DATA_ROOT"/venvs/runtime-*) ;;
+    *) deny 66 "CURRENT_RUNTIME_TARGET_OUTSIDE_VERSIONED_RELEASE_DIRECTORY" ;;
+  esac
 else
   PREVIOUS_TARGET=""
 fi
@@ -109,12 +125,17 @@ STAGING="$DATA_ROOT/venvs/.runtime-$RELEASE_SHA.staging-$$"
 mkdir "$STAGING"
 
 SWITCHED=0
+FINALIZED=0
 on_exit() {
   status=$?
   trap - EXIT
   if [[ "$status" -ne 0 && "$SWITCHED" -ne 1 && -n "${STAGING:-}" && -d "$STAGING" ]]; then
     rm -rf -- "$STAGING"
     printf 'CLEANUP=FAILED_STAGING_REMOVED\n' >&2
+  fi
+  if [[ "$status" -ne 0 && "$SWITCHED" -ne 1 && "$FINALIZED" -eq 1 && -d "$FINAL" ]]; then
+    rm -rf -- "$FINAL"
+    printf 'CLEANUP=UNACTIVATED_RELEASE_REMOVED\n' >&2
   fi
   if [[ "$status" -ne 0 && "$SWITCHED" -eq 1 ]]; then
     if [[ -n "$PREVIOUS_TARGET" ]]; then
@@ -183,9 +204,13 @@ PY
 
 # Finalize a versioned directory, then atomically switch the current pointer.
 mv "$STAGING" "$FINAL"
-ln -s "$FINAL" "$DATA_ROOT/venvs/.current-new-$$"
-mv -Tf "$DATA_ROOT/venvs/.current-new-$$" "$CURRENT"
+FINALIZED=1
+ln -s "$FINAL" "$DATA_ROOT/venvs/.current-new-$"
+# Mark rollback active before the pointer mutation, so a signal or failed rename
+# still takes the restoration path.
 SWITCHED=1
+mv -Tf "$DATA_ROOT/venvs/.current-new-$" "$CURRENT"
+FINALIZED=0
 
 set +e
 printf '%s\n' '{"request_id":"post-activation-preflight","task":"translate","text":"probe","parameters":{"source_language":"es","target_language":"en"}}' \
