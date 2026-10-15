@@ -381,9 +381,10 @@ jobs:
               data = wheel.read_bytes()
               digest = hashlib.sha256(data).hexdigest()
               with zipfile.ZipFile(wheel) as z:
-                  entries = [n for n in z.namelist() if n.endswith(".dist-info/METADATA")]
+                  # Select only top-level *.dist-info/METADATA and exclude nested vendored metadata.
+                  entries = [n for n in z.namelist() if n.endswith(".dist-info/METADATA") and n.count("/") == 1]
                   if len(entries) != 1:
-                      raise SystemExit(f"Expected one wheel METADATA: {wheel.name}")
+                      raise SystemExit(f"Expected one top-level wheel METADATA in {wheel.name}; found {entries!r}")
                   meta = Parser().parsestr(z.read(entries[0]).decode("utf-8", "replace"))
               name, version = meta.get("Name"), meta.get("Version")
               if not name or not version:
