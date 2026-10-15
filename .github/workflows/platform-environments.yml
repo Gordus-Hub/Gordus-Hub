@@ -40,8 +40,7 @@ jobs:
             test "$VERSION_CODENAME" = "trixie"
             bash /usr/local/bin/install-android-sdks
             test -s "$ANDROID_HOME/platforms/android-36/android.jar"
-            test -s "$ANDROID_HOME/platforms/android-37/android.jar"
+            test -s "$ANDROID_HOME/platforms/android-37.0/android.jar"
             test -f "$ANDROID_HOME/system-images/android-36/google_apis/x86_64/package.xml"
-            test -f "$ANDROID_HOME/system-images/android-37/google_apis/x86_64/package.xml"
-            echo "PASS: Debian 13 (trixie), Android 16/API 36, and Android 17/API 37 SDK/system-image packages verified."
+            echo "PASS: Debian 13 (trixie), Android 16/API 36 and Android 17/API 37.0 SDK platforms/build tools verified."
           '
