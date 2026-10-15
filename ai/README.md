@@ -21,10 +21,10 @@ The active component set is limited to three Python libraries: Argos Translate, 
 
 ## Install/validation scope
 
-CI can test that all three Python packages install in clean temporary environments and their APIs import. That does not certify persistent installation, Argos translation quality, CLTK analysis on corpora, or Inspect AI suite execution. These task-level gates are intentionally pending user approval and selected artifacts.
+CI has tested all three Python packages in clean temporary environments. The user has separately authorized persistent installation of the pinned packages into the managed versioned virtualenv; that installation has not yet been performed, and it does not certify Argos translation quality, CLTK analysis on corpora, or Inspect AI suite execution. Those task-level gates still require selected artifacts and explicit approval.
 
 See WIRING.md, ACQUISITION_READINESS.md and THREE_LIBRARY_WIRING_AUDIT.md for the contract, gates and removal ledger.
 
 ## Runtime hardening status
 
-The repository validates both each isolated package profile and the combined runtime candidate. Persistent installation is denied until a hash-locked dependency file is committed and explicitly reviewed, the acquisition policy authorizes installation, a per-run approval is supplied, and a writable persistent volume is mounted. See `ACQUISITION_READINESS.md` and `kestra/AI_COMPONENT_FOUNDATION.md`. No package or language-resource installation was performed by this hardening change.
+The repository validates both each isolated package profile and the combined runtime candidate. The committed lock is reviewed for pinned installability, and repository policy records the user's authorization for a managed persistent install. Execution remains blocked unless a per-run approval is supplied and the approved writable persistent volume is mounted on the target. See `ACQUISITION_READINESS.md` and `kestra/AI_COMPONENT_FOUNDATION.md`. No persistent installation or language-resource acquisition is claimed by this change.
