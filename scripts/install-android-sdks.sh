@@ -30,7 +30,7 @@ run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install \
   system-images/android-36/google_apis/x86_64
 
 # Android 17/API 37 is currently a preview; use the official Beta channel.
-run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install --beta \
+run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install --canary \
   platforms/android-37 \
   build-tools/37.0.0 \
   system-images/android-37/google_apis/x86_64
