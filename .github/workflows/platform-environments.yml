@@ -42,7 +42,7 @@ jobs:
             test -s "$ANDROID_HOME/platforms/android-36/android.jar"
             test -s "$ANDROID_HOME/platforms/android-37.0/android.jar"
             test -f "$ANDROID_HOME/platforms/android-37.0/source.properties"
-            grep -Eq "^AndroidVersion.ApiLevel=37$" "$ANDROID_HOME/platforms/android-37.0/source.properties"
+            awk -F= '$1 == "AndroidVersion.ApiLevel" { gsub(/[[:space:]\r]/, "", $2); if ($2 == "37" || $2 == "37.0") found=1 } END { exit !found }' "$ANDROID_HOME/platforms/android-37.0/source.properties"
             test -f "$ANDROID_HOME/system-images/android-36/google_apis/x86_64/package.xml"
             echo "PASS: Debian 13 (trixie), Android 16/API 36 and Android 17/API 37.0 SDK platforms/build tools verified."
           '
