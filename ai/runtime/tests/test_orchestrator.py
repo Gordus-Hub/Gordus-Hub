@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ai" / "runtime"))
 
-from gordus_ai.adapters import AdapterReadiness
+from gordus_ai.adapters import AdapterReadiness, UnavailableAdapter
 from gordus_ai.argos_adapter import ArgosTranslateAdapter
 from gordus_ai.contracts import WorkRequest
 from gordus_ai.orchestrator import GordusOrchestrator
@@ -78,7 +78,14 @@ class WiringTests(unittest.TestCase):
 
     def test_cltk_and_inspect_routes_fail_closed_without_approved_resources_or_suites(self):
         manifest, wiring = self.load_inputs()
-        orchestrator = GordusOrchestrator(manifest, wiring, git_sha="test")
+        orchestrator = GordusOrchestrator(
+            manifest, wiring,
+            adapters={
+                "cltk": UnavailableAdapter("cltk", ("CLTK_RESOURCE_PROFILE_NOT_APPROVED",)),
+                "inspect-ai": UnavailableAdapter("inspect-ai", ("INSPECT_AI_SUITE_NOT_REGISTERED",)),
+            },
+            git_sha="test",
+        )
         cltk_result = orchestrator.run(WorkRequest.from_mapping({
             "request_id": "cltk-blocked", "task": "classical_language_analysis",
             "text": "Gallia est omnis divisa in partes tres.", "parameters": {"language": "lat"}
