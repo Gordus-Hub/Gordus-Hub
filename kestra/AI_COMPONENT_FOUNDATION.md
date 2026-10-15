@@ -21,7 +21,7 @@ A package smoke-test pass is not equivalent to translating text, performing a CL
 
 ## Explicit gates
 
-1. User approval before installation into persistent runtime storage.
+1. Record explicit user approval for installation into managed persistent runtime storage (approval now recorded; per-run and host-volume gates remain).
 2. Approve each Argos language-direction artifact and record immutable URL, byte size, SHA-256, license and provenance.
 3. Select and approve CLTK/Stanza resource packages, record their files/hashes/licenses and verify offline-only task execution.
 4. Define reviewed Inspect AI task suites, dataset provenance, score contracts and model/network scope.
@@ -36,7 +36,7 @@ Missing pins, inconsistent requirements, unknown active IDs/routes, failed impor
 ## Additional runtime-install hardening
 
 - The active package profiles are now checked as a single resolver input (`ai/requirements/runtime.in`) so direct-pin drift or conflicts fail validation.
-- GitHub Actions tests the combined package set in one disposable environment using a SHA-256-hashed lock. When no reviewed lock is committed, the generated lock is uploaded as a non-authoritative candidate; it does not enable persistent installation.
-- `scripts/ai/install_runtime.sh` is prepared as a gated installer: it requires repository authorization, explicit per-run operator approval, a reviewed committed hash lock, a release commit SHA and a mounted writable data volume. It installs into a versioned virtual environment and activates via an atomic symlink change with rollback on failed post-validation.
-- The installer has **not** been executed. The current policy continues to deny persistent installation, and the language/data/suite gates remain closed.
+- GitHub Actions tests the combined package set in one disposable environment using a SHA-256-hashed lock. The committed lock is reviewed for pinned installability only; generated locks remain non-authoritative and cannot enable installation.
+- `scripts/ai/install_runtime.sh` is the gated installer: repository authorization and lock review are recorded, but it still requires explicit per-run operator approval, the matching release/source commit SHA and a mounted writable data volume. It installs into a versioned virtual environment and activates via an atomic symlink change with rollback on failed post-validation.
+- The installer has **not** been executed against a persistent target in this operation because no target host/volume is connected to the session. Repository authorization is now recorded; per-run, host and volume gates remain closed until a real execution passes. Language/data/suite gates remain closed.
 - Kestra remains a control-plane declaration in this repository. Its current foundation flow logs boundaries; no persistent Kestra deployment or unattended installation is claimed.
