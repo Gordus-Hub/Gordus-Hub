@@ -14,13 +14,6 @@ on:
     paths:
       - .github/workflows/ai-library-wheelhouse-release.yml
       - ai/requirements/locks/runtime-py313-linux-x86_64.txt
-  workflow_dispatch:
-    inputs:
-      publish_release:
-        description: "Publish a versioned, immutable prerelease wheelhouse for this branch SHA"
-        required: true
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -31,7 +24,7 @@ concurrency:
 
 jobs:
   materialize:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/refactor/three-library-wiring-2026-10-15') || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'refactor/three-library-wiring-2026-10-15' && github.event.pull_request.head.repo.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/refactor/three-library-wiring-2026-10-15' && inputs.publish_release == true)
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/refactor/three-library-wiring-2026-10-15') || (github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'refactor/three-library-wiring-2026-10-15' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
