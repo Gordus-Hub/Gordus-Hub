@@ -14,7 +14,14 @@ fi
 
 # Android 17 (API 37) is currently distributed through the preview channel.
 # --channel=3 makes preview packages eligible while keeping package IDs explicit.
+set +o pipefail
 yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --channel=3 --licenses >/dev/null
+license_status=${PIPESTATUS[1]}
+set -o pipefail
+if (( license_status != 0 )); then
+  echo "ERROR: Android SDK license acceptance failed." >&2
+  exit "$license_status"
+fi
 
 "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --channel=3 --install \
   "platform-tools" \
