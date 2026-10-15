@@ -12,7 +12,7 @@ command -v tar >/dev/null 2>&1 || { echo "ERROR: tar is required." >&2; exit 2; 
 
 if [[ -z "$TAG" ]]; then
   TAG="$(gh release list --repo "$REPO" --limit 100 --json tagName,isPrerelease,isDraft,publishedAt \
-    --jq "[.[] | select(.isPrerelease == true and .isDraft == false and (.tagName | startswith(\"$PREFIX\"))] | sort_by(.publishedAt) | last | .tagName")"
+    --jq "[.[] | select(.isPrerelease == true and .isDraft == false and (.tagName | startswith(\"$PREFIX\")))] | sort_by(.publishedAt) | last | .tagName")"
 fi
 [[ -n "$TAG" && "$TAG" == "$PREFIX"* ]] || {
   echo "ERROR: No matching materialized bundle release found. Supply its release tag as argument 1." >&2
