@@ -65,7 +65,7 @@ jobs:
           python -m unittest discover -s ai/runtime/tests -v \
             2>&1 | tee "$RUNNER_TEMP/gordus-ai-evidence/wiring-contract-tests.txt"
           set +e
-          printf '%s\\n' '{"request_id":"ci-preflight","task":"translate","text":"probe","parameters":{"target_language":"en"}}' \
+          printf '%s\n' '{"request_id":"ci-preflight","task":"translate","text":"probe","parameters":{"target_language":"en"}}' \
             | python -m gordus_ai.cli \
                 --manifest ai/components.json --wiring ai/wiring.json \
                 > "$RUNNER_TEMP/gordus-ai-evidence/wiring-dry-run.json"
