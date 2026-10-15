@@ -37,40 +37,16 @@ LABEL org.opencontainers.image.source="https://github.com/Gordus-Hub/Gordus-Hub"
       org.gordus.ai.runtime.lock.sha256="${GORDUS_AI_LOCK_SHA256}"
 
 # Materialize all three pinned libraries and every hash-locked transitive dependency
-# in this reusable image. This installs neither packages on the user's host nor
-# language/model/evaluation assets.
+# in this reusable image. No packages are installed on the user's host and no
+# language/model/evaluation assets are acquired at build time.
 RUN test "${GORDUS_AI_LOCK_SHA256}" != "UNBOUND" \
     && printf '%s  %s\n' "${GORDUS_AI_LOCK_SHA256}" "ai/requirements/locks/runtime-py313-linux-x86_64.txt" | sha256sum --check - \
     && python3.13 -m venv /opt/gordus-ai-venv \
     && /opt/gordus-ai-venv/bin/python -m pip install --no-input --disable-pip-version-check --no-cache-dir --require-hashes -r ai/requirements/locks/runtime-py313-linux-x86_64.txt \
     && /opt/gordus-ai-venv/bin/python -m pip check \
-    && /opt/gordus-ai-venv/bin/python - <<'PY'
-from importlib.metadata import version
-from argostranslate import package, translate
-from cltk import NLP
-import inspect_ai
-import stanza
-import torch
-
-expected = {
-    "argostranslate": "1.11.0",
-    "cltk": "2.5.1",
-    "inspect-ai": "0.3.280",
-    "PyYAML": "6.0.2",
-    "torch": "2.14.1+cpu",
-}
-for name, wanted in expected.items():
-    actual = version(name)
-    if actual != wanted:
-        raise SystemExit(f"{name}: expected {wanted}, got {actual}")
-if not callable(NLP) or not callable(translate.get_installed_languages):
-    raise SystemExit("Required library APIs are not callable")
-if torch.version.cuda is not None:
-    raise SystemExit(f"CPU-only runtime required, got CUDA {torch.version.cuda}")
-print("THREE_LIBRARY_IMPORT_AND_PIN_CHECK=PASS")
-PY
-RUN /opt/gordus-ai-venv/bin/inspect --version \
-    && /opt/gordus-ai-venv/bin/python -m unittest discover -s /opt/gordus-ai/ai/runtime/tests -v \
+    && /opt/gordus-ai-venv/bin/python scripts/ai/verify_installed_libraries.py \
+    && /opt/gordus-ai-venv/bin/inspect --version \
+    && /opt/gordus-ai-venv/bin/python -m unittest discover -s ai/runtime/tests -v \
     && chown -R root:root /opt/gordus-ai /opt/gordus-ai-venv \
     && chmod -R a=rX /opt/gordus-ai /opt/gordus-ai-venv
 
