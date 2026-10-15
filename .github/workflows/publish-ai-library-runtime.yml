@@ -83,7 +83,7 @@ jobs:
           SHA_TAG: ${{ steps.metadata.outputs.sha_tag }}
         run: |
           set -Eeuo pipefail
-          docker run --rm "$SHA_TAG" /bin/bash -lc \
+          docker run --rm "$SHA_TAG" /bin/bash -c \
             'set -Eeuo pipefail; python scripts/ai/verify_installed_libraries.py; inspect --version; python -m unittest discover -s ai/runtime/tests -v' \
             2>&1 | tee "$RUNNER_TEMP/gordus-ai-image-evidence/container-verification.log"
           test -s "$RUNNER_TEMP/gordus-ai-image-evidence/container-verification.log"
