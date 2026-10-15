@@ -24,7 +24,7 @@ bash scripts/ai/fetch_library_bundle.sh
 Or specify an exact release tag:
 
 ```bash
-bash scripts/ai/fetch_library_bundle.sh gordus-ai-python313-linux-x86_64-<commit12>
+bash scripts/ai/fetch_library_bundle.sh gordus-ai-python313-linux-x86_64-<full-commit-sha>
 ```
 
 The script downloads the archive and its external manifests, checks the SHA-256 values, validates archive paths, and extracts into the selected directory. It does **not** install packages into the current host automatically.
