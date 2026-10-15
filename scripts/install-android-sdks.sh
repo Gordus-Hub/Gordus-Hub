@@ -53,6 +53,33 @@ for api in 36 37; do
     echo "ERROR: Android API $api platform is missing or incomplete at $platform_dir." >&2
     exit 1
   }
+  if [[ "$api" == "37" ]]; then
+    test -f "$platform_dir/source.properties" || {
+      echo "ERROR: Android 17 platform source.properties is missing." >&2
+      exit 1
+    }
+    grep -Eq '^AndroidVersion.ApiLevel=37
+for version in 36.0.0 37.0.0; do
+  test -x "$ANDROID_HOME/build-tools/$version/aapt" || {
+    echo "ERROR: Android Build-Tools $version is missing or incomplete." >&2
+    exit 1
+  }
+done
+
+"$ANDROID_HOME/platform-tools/adb" version
+"$ANDROID_HOME/emulator/emulator" -version
+"$ANDROID_CLI" --sdk="$ANDROID_HOME" --no-metrics -V
+
+printf '\nAndroid SDK installation verified.\n'
+printf 'Debian release: '
+. /etc/os-release
+printf '%s (%s)\n' "$PRETTY_NAME" "${VERSION_CODENAME:-unknown}"
+printf 'Installed Android platform APIs: 36 and 37.0 (Android 17 preview). API level 37 verified.\n'
+ "$platform_dir/source.properties" || {
+      echo "ERROR: Android 17 platform metadata does not identify API level 37." >&2
+      exit 1
+    }
+  fi
 done
 for version in 36.0.0 37.0.0; do
   test -x "$ANDROID_HOME/build-tools/$version/aapt" || {
