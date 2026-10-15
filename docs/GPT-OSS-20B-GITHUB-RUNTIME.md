@@ -1,35 +1,43 @@
-# GPT-OSS 20B: full model on GitHub Actions
+# GPT-OSS 20B: complete download and runtime preparation
 
-## Selected model
+## Scope
 
-The selected model for the GitHub runtime is the complete official `openai/gpt-oss-20b` checkpoint. The workflow is `.github/workflows/gpt-oss-20b-runtime.yml`. It downloads the model snapshot from Hugging Face, starts vLLM with that model, verifies the OpenAI-compatible models endpoint, and performs a real chat-completion inference. It does not substitute GPT-OSS 120B, a distilled model, or an application API.
+The manual workflow `.github/workflows/gpt-oss-20b-runtime.yml` is limited to two outcomes:
 
-Official references:
-- Model overview: https://github.com/openai/gpt-oss
+1. Download the complete official Hugging Face repository for `openai/gpt-oss-20b` at an immutable revision, including all repository files and the full weight files.
+2. Download the official vLLM Docker runtime image and verify that its Python package imports.
+
+The workflow does **not** start the model server and does **not** run inference. It records a persistent `download-manifest.json` in the model directory containing the pinned repository revision, verified file count, local byte total, and vLLM image ID. It checks that every path listed by the upstream repository exists locally and that file sizes match upstream metadata wherever provided.
+
+Official sources:
+- Model repository: https://huggingface.co/openai/gpt-oss-20b
 - OpenAI model card: https://developers.openai.com/api/docs/models/gpt-oss-20b
-- OpenAI inference guide: https://developers.openai.com/cookbook/articles/gpt-oss/run-transformers
 - vLLM GPT-OSS guide: https://github.com/vllm-project/recipes/blob/main/OpenAI/GPT-OSS.md
+- vLLM Docker documentation: https://docs.vllm.ai/en/stable/deployment/docker/
 
-## Runner requirement (fail-closed)
+## Required persistent runner
 
-This workflow needs a configured GitHub Actions runner with the labels `self-hosted`, `linux`, `x64`, `gpu`, and `gpt-oss-20b`. Its host must have Docker Engine, NVIDIA Container Toolkit, Python 3, outbound access to Hugging Face, at least 40 GiB of free disk space, and a supported GPU with at least 20,000 MiB VRAM. The workflow checks the GPU compute capability before it downloads weights and rejects incompatible hardware rather than pretending the model will run.
+The workflow targets a preconfigured self-hosted runner labeled `self-hosted`, `linux`, `x64`, `gpu`, and `gpt-oss-20b`. The GPU label is used to route the workflow to the intended host, but this download-only job does not test or use the GPU.
 
-Do not assume the standard GitHub-hosted Tesla T4 GPU is compatible: it has 16 GB VRAM and compute capability 7.5. The current workflow deliberately requires a supported Hopper-or-later GPU to avoid an unsupported inference configuration. GitHub larger runners must be provisioned and enabled in the organization/enterprise settings before the workflow can be routed to them; a repository commit does not provision compute capacity or authorize charges.
+The host must already have:
+- Docker Engine with permission to pull and run containers.
+- Python 3 and permission to create a virtual environment.
+- Outbound access to Hugging Face and Docker Hub.
+- At least 75 GiB free on the `HOME` filesystem for the complete repository download.
+- At least 20 GiB free on the Docker image storage filesystem.
+
+This repository workflow does not provision a physical/virtual machine, GPU, GPU driver, Docker Engine, account credentials, or billing. These host prerequisites must be present before the workflow can run. A standard ephemeral GitHub-hosted runner is not a substitute for the persistent storage destination required here.
 
 ## Run
 
-1. In **Settings → Actions → Runners**, register or make available a Linux x64 GPU runner and assign all five labels.
-2. Verify Docker and NVIDIA Container Toolkit work on that runner.
-3. Open **Actions → GPT-OSS 20B full model runtime → Run workflow**.
-4. Choose a context length and the temporary runtime window.
-5. Confirm that the job downloads the full Hugging Face snapshot, lists `gpt-oss-20b` from `/v1/models`, and completes a real inference request.
+1. In repository **Settings → Actions → Runners**, register or select the persistent runner and assign all five labels above.
+2. Confirm Docker works and the two free-space checks pass.
+3. Open **Actions → GPT-OSS 20B full download and runtime preparation → Run workflow**.
+4. Wait for all steps to pass.
+5. Check the retained file `~/models/gpt-oss-20b/download-manifest.json` on the runner. The full model repository remains in `~/models/gpt-oss-20b`; the vLLM image remains in Docker's local image store.
 
-Weights are stored in the runner's Hugging Face cache at `~/.cache/huggingface`; they are not committed to Git history or uploaded as workflow artifacts. The cache persists only if the runner host's home directory persists.
+## What a successful run guarantees
 
-## Operational boundary
+A successful job verifies that the full snapshot at the recorded immutable upstream revision was downloaded, every file reported by the repository API exists, checked file sizes match upstream metadata, the checkpoint files and model configuration/tokenizer exist, and the vLLM image has been pulled and its Python package imports.
 
-The workflow tests the whole model end-to-end and stops its temporary container when the job ends. It does not create an always-on endpoint. Keeping inference available after the Actions job ends requires a persistent, secured GPU service, its own lifecycle management, and access controls. Never expose an unauthenticated model endpoint to the public internet.
-
-## Acceptance criteria
-
-A run is successful only if the hardware and storage gates pass, the full model downloads, vLLM loads and lists `gpt-oss-20b`, and the real inference request returns non-empty generated content. A successful run demonstrates load and inference on that runner; it does not by itself certify continuous availability or production readiness.
+This is a download-and-infrastructure-preparation result only. It does not prove that the model can load on the host, perform inference, remain available as a service, or meet production requirements. No weight files are committed to the Git repository or uploaded as GitHub Actions artifacts; they remain on the persistent runner.
