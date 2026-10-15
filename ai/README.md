@@ -39,3 +39,8 @@ See [`ai/WIRING.md`](WIRING.md) and [`ai/wiring.json`](wiring.json) for the gove
 ## Acquisition readiness
 
 See [`ACQUISITION_READINESS.md`](ACQUISITION_READINESS.md) for immutable source revisions, the required download-all-then-install-all chronology, and the current resource/persistence blockers. Model-weight downloads remain disabled until that readiness gate passes.
+
+
+## Alternative model-size assessment
+
+See [ALTERNATIVE_COMPONENTS.md](ALTERNATIVE_COMPONENTS.md) for ranked download blockers, quantized candidates, size/quality trade-offs, backend implications and acceptance gates. This assessment does not silently replace canonical components or authorize large downloads.
