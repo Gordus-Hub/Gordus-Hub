@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "state": "PREPARED_NOT_RUNTIME_CERTIFIED",
+  "execution_policy": {
+    "fail_closed": true,
+    "stop_on_first_non_success": true,
+    "raw_payload_logging": false,
+    "generated_code_execution": false,
+    "model_output_is_untrusted": true,
+    "model_weight_downloads_by_cli": false,
+    "required_evidence": [
+      "request_id",
+      "git_sha",
+      "component_id",
+      "start_time_utc",
+      "end_time_utc",
+      "input_sha256",
+      "output_sha256",
+      "status",
+      "gate_codes"
+    ]
+  },
+  "routes": {
+    "translate": {
+      "steps": ["madlad400-3b-mt"],
+      "required_parameters": ["target_language"]
+    },
+    "code_generation": {
+      "steps": ["qwen3-coder-30b-a3b-instruct"],
+      "required_parameters": []
+    },
+    "classical_language_analysis": {
+      "steps": ["cltk"],
+      "required_parameters": ["language"]
+    },
+    "specialist_ancient_language_analysis": {
+      "steps": ["heidelberg-ancient-language-models"],
+      "required_parameters": ["language", "artifact_scope"]
+    },
+    "evaluate_output": {
+      "steps": ["inspect-ai"],
+      "required_parameters": ["evaluation_suite_id"]
+    },
+    "translate_and_evaluate": {
+      "steps": ["madlad400-3b-mt", "inspect-ai"],
+      "required_parameters": ["target_language", "evaluation_suite_id"]
+    },
+    "code_and_evaluate": {
+      "steps": ["qwen3-coder-30b-a3b-instruct", "inspect-ai"],
+      "required_parameters": ["evaluation_suite_id"]
+    }
+  }
+}

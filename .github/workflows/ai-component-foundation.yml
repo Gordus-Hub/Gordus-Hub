@@ -57,6 +57,23 @@ jobs:
           printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/gordus-ai-evidence/git-sha.txt"
           python --version > "$RUNNER_TEMP/gordus-ai-evidence/host-python.txt"
 
+      - name: Test wiring contracts and capture fail-closed dry run
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          export PYTHONPATH="ai/runtime"
+          python -m unittest discover -s ai/runtime/tests -v \
+            2>&1 | tee "$RUNNER_TEMP/gordus-ai-evidence/wiring-contract-tests.txt"
+          set +e
+          printf '%s\\n' '{"request_id":"ci-preflight","task":"translate","text":"probe","parameters":{"target_language":"en"}}' \
+            | python -m gordus_ai.cli \
+                --manifest ai/components.json --wiring ai/wiring.json \
+                > "$RUNNER_TEMP/gordus-ai-evidence/wiring-dry-run.json"
+          cli_status=$?
+          set -e
+          test "$cli_status" -eq 3
+          python -c 'import json, pathlib; p=json.loads(pathlib.Path("'"$RUNNER_TEMP"'/gordus-ai-evidence/wiring-dry-run.json").read_text()); assert p["status"] == "BLOCKED"; assert p["certification"] == "NOT_GRANTED"; assert p["model_weights_downloaded"] is False; print("Fail-closed wiring CLI: PASS")'
+
       - name: Build the AI-specific Debian 13 image
         run: docker build --pull --file ai/runtime/Dockerfile --tag gordus-ai-debian13:ci .
 

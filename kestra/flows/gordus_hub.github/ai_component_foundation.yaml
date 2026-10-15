@@ -9,6 +9,8 @@ tasks:
     type: io.kestra.plugin.core.log.Log
     message: >
       AI_COMPONENT_FOUNDATION=PREPARED;
+      WIRING_CONTRACT=DEFINED_AND_CI_TESTED;
+      DEFAULT_ADAPTERS=FAIL_CLOSED;
       PACKAGE_SMOKE_TESTS=GITHUB_ACTIONS;
       MODEL_WEIGHTS=NOT_DOWNLOADED;
       MODEL_INFERENCE=NOT_AUTHORIZED;
@@ -16,6 +18,4 @@ tasks:
   - id: declare_required_gates
     type: io.kestra.plugin.core.log.Log
     message: >
-      Required gates: immutable model revision, per-artifact license review,
-      resource budget, backend selection, independent evaluation, and rollback
-      evidence. This control-plane smoke test does not attest those gates as passed.
+      Wiring routes are explicit in ai/wiring.json. CI contract tests use test-only fake adapters; no fake adapter is registered for real use. Required gates: immutable model revision, per-artifact license review, resource budget, backend selection, real adapter registration, independent evaluation, and rollback evidence. This control-plane smoke test does not attest those gates as passed.
