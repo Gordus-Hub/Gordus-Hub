@@ -174,8 +174,7 @@ def main() -> int:
     if wiring.get("schema_version") != 1 or execution_policy.get("fail_closed") is not True:
         errors.append("wiring must declare schema_version=1 and fail_closed=true")
     for field in ("model_weight_downloads_by_cli", "argos_language_package_downloads_by_cli",
-                  "cltk_resource_downloads_by_cli", "inspect_ai_suite_execution_authorized",
-                  "persistent_installation_authorized"):
+                  "cltk_resource_downloads_by_cli", "inspect_ai_suite_execution_authorized"):
         if execution_policy.get(field) is not False:
             errors.append(f"wiring execution_policy.{field} must be false")
     routes = wiring.get("routes")
@@ -238,6 +237,8 @@ def main() -> int:
     ):
         if acquisition_policy.get(field) is not True:
             errors.append(f"acquisition policy.{field} must be true")
+    if execution_policy.get("persistent_installation_authorized") is not acquisition_policy.get("persistent_installation_authorized"):
+        errors.append("wiring and acquisition persistent-installation authorization flags must match")
     if not isinstance(acquisition_policy.get("reviewed_runtime_hash_lock_approved"), bool):
         errors.append("acquisition policy.reviewed_runtime_hash_lock_approved must be a boolean")
 
