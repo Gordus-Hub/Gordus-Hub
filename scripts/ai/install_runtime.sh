@@ -189,6 +189,7 @@ from importlib.metadata import version
 from argostranslate import package, translate
 from cltk import NLP
 import stanza
+import torch
 import inspect_ai
 
 expected = {
@@ -196,6 +197,7 @@ expected = {
     "cltk": "2.5.1",
     "inspect-ai": "0.3.280",
     "PyYAML": "6.0.2",
+    "torch": "2.14.1+cpu",
 }
 for distribution, wanted in expected.items():
     found = version(distribution)
@@ -203,6 +205,8 @@ for distribution, wanted in expected.items():
         raise SystemExit(f"{distribution}: expected {wanted}, found {found}")
 assert callable(NLP)
 assert callable(translate.get_installed_languages)
+if torch.version.cuda is not None:
+    raise SystemExit(f"CPU-only runtime expected, got CUDA {torch.version.cuda}")
 print("Combined runtime imports and exact direct pins: PASS")
 PY
 "$STAGING/bin/inspect" --version

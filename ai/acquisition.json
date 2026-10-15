@@ -41,7 +41,7 @@
   "persistent_data_root": "/var/lib/gordus-ai",
   "pending_gates": [
     "user_approval_for_persistent_library_installation",
-    "commit_and_review_python313_linux_x86_64_transitive_hash_lock",
+    "review_committed_python313_linux_x86_64_transitive_hash_lock",
     "explicit_approval_of_reviewed_runtime_hash_lock",
     "validate_dedicated_persistent_data_volume_and_permissions",
     "approve_and_hash_each_required_argos_language_direction_package",

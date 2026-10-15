@@ -1,6 +1,6 @@
 # Three-library installation readiness
 
-**State:** wiring/preflight candidate; persistent installation is not authorized or performed.
+**State:** package-level and combined-runtime CI passed on 2026-10-15; the CPU-only hashed runtime lock is committed; persistent installation remains blocked and has not been performed.
 
 ## Active library profile
 
@@ -19,7 +19,7 @@ This preparation branch never installs packages to the user's host or persistent
 - Argos language pairs: ai/translation/pairs.json is still PAIR_MATRIX_NOT_APPROVED; zero approved pairs.
 - CLTK resources: ai/linguistics/resources.json has an empty approved profile list. No model/corpus retrieval at runtime.
 - Inspect AI: ai/evaluation/suites.json has an empty approved suite list. Evaluation results do not certify themselves.
-- Direct dependency pins are validated by registry preflight. Full transitive hash-locks are a separate release gate.
+- Direct dependency pins are validated by registry preflight. The committed transitive lock `ai/requirements/locks/runtime-py313-linux-x86_64.txt` passed CI with `--require-hashes`, `pip check`, exact package/import checks, CPU-only PyTorch verification and all 12 runtime contract tests. It still requires explicit review/approval in the acquisition policy before persistent installation.
 - Ordinary CI has no pip cache restore/save configuration; the previous Hugging Face model-cache directory has been removed from the AI runtime image.
 
 ## Required evidence before installation approval
@@ -28,9 +28,9 @@ A reviewed CI run must pass the registry validator, wiring contract tests, dispo
 
 ## Combined-runtime and persistence hardening
 
-The AI foundation workflow now also resolves all active profiles together for CPython 3.13 / Linux x86_64. It produces a SHA-256-hashed lock candidate, installs from that lock with pip's `--require-hashes`, runs `pip check`, exact-version/import checks, the routing tests and emits lock, resolver and installed-environment evidence.
+The AI foundation workflow resolves all active profiles together for CPython 3.13 / Linux x86_64. The committed CPU-only lock includes SHA-256 hashes and is installed in CI with `pip --require-hashes`; CI runs `pip check`, exact-version/import checks, CPU-only PyTorch verification, routing tests and emits resolver and installed-environment evidence.
 
-If a reviewed lockfile is not committed, CI's generated lock is a temporary candidate only. It is not copied into production or treated as approved. The persistent installer requires the canonical lock at `ai/requirements/locks/runtime-py313-linux-x86_64.txt` plus explicit approval in `ai/acquisition.json`.
+The committed lock is a tested candidate but is not yet approved for persistent installation. The installer requires explicit approval of this exact lock in `ai/acquisition.json`, a per-run approval signal, and a mounted writable persistent data volume.
 
 The prepared installer is fail-closed and has not been executed. It requires both repository authorization and a separate per-run approval value, a 40-character release commit SHA, Debian 13/Python 3.13, an explicitly mounted writable `/var/lib/gordus-ai`, hash-locked installation, exact package checks, routing tests and a fail-closed post-activation check. It stages a versioned virtual environment, switches the `current` symlink atomically, and restores the prior runtime if post-activation validation fails.
 
