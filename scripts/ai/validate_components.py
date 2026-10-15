@@ -78,10 +78,11 @@ def main() -> int:
         errors.append("unsupported component manifest schema_version")
     if policy.get("fail_closed") is not True:
         errors.append("manifest policy.fail_closed must be true")
-    for field in ("persistent_installation_authorized", "model_weight_downloads_in_ci",
-                  "model_execution_authorized", "argos_language_package_downloads_in_ci",
-                  "cltk_language_resource_downloads_in_ci", "inspect_ai_suite_execution_authorized"):
+    for field in ("model_weight_downloads_in_ci", "model_execution_authorized",
+                  "argos_language_package_downloads_in_ci", "cltk_language_resource_downloads_in_ci",
+                  "inspect_ai_suite_execution_authorized"):
         if policy.get(field) is not False:
+            errors.append(f"manifest policy.{field} must be false")
             errors.append(f"manifest policy.{field} must be false")
 
     components = manifest.get("components")
@@ -225,8 +226,10 @@ def main() -> int:
         pending_gates.append({"component": "inspect-ai", "gate": "EVALUATION_SUITE_REVIEW_PENDING"})
 
     acquisition_policy = acquisition.get("policy", {})
-    if acquisition_policy.get("persistent_installation_authorized") is not False:
-        errors.append("acquisition policy must not authorize persistent installation")
+    if not isinstance(acquisition_policy.get("persistent_installation_authorized"), bool):
+        errors.append("acquisition policy.persistent_installation_authorized must be a boolean")
+    elif policy.get("persistent_installation_authorized") is not acquisition_policy.get("persistent_installation_authorized"):
+        errors.append("component manifest and acquisition policy persistent-installation flags must match")
     for field in (
         "persistent_installation_requires_hash_locked_runtime",
         "persistent_installation_requires_mounted_data_volume",
@@ -266,7 +269,7 @@ def main() -> int:
                 errors.append("runtime lock has too few SHA-256 artifact hashes")
             for package_key, version in expected_runtime_pins.items():
                 direct_pin = re.compile(
-                    rf"(?im)^\\s*{re.escape(package_key)}=={re.escape(version)}(?:[ \\t]+\\\\)?[ \\t]*$"
+                    rf"(?im)^\s*{re.escape(package_key)}=={re.escape(version)}(?:[ \t]+\\)?[ \t]*$"
                 )
                 if not direct_pin.search(runtime_lock_text):
                     errors.append(f"runtime lock is missing direct pin {package_key}=={version}")
@@ -274,7 +277,7 @@ def main() -> int:
                 runtime_lock_hash_count >= max(1, len(expected_runtime_pins))
                 and all(
                     re.search(
-                        rf"(?im)^\\s*{re.escape(name)}=={re.escape(version)}(?:[ \\t]+\\\\)?[ \\t]*$",
+                        rf"(?im)^\s*{re.escape(name)}=={re.escape(version)}(?:[ \t]+\\)?[ \t]*$",
                         runtime_lock_text,
                     )
                     for name, version in expected_runtime_pins.items()
