@@ -12,7 +12,7 @@ ENV PATH=${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        bash ca-certificates curl git openjdk-21-jdk-headless unzip \
-       libasound2t64 libgcc-s1 libgl1 libncurses6 libnss3 libpng16-16t64 libpulse0 \\
+       libasound2t64 libgcc-s1 libgl1 libncurses6 libnss3 libpng16-16t64 libpulse0 \
        libstdc++6 libx11-6 libxcb1 libxcomposite1 libxcursor1 libxi6 \
        libxrender1 libxtst6 zlib1g \
     && rm -rf /var/lib/apt/lists/*
