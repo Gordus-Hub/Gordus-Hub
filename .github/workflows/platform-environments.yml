@@ -2,6 +2,7 @@ name: Debian 13 + Android 16/17 environment
 
 on:
   push:
+    branches: ["main"]
     paths:
       - ".devcontainer/**"
       - "scripts/install-android-sdks.sh"
