@@ -32,3 +32,11 @@ A package smoke-test pass is not equivalent to translating text, performing a CL
 ## Failure behavior
 
 Missing pins, inconsistent requirements, unknown active IDs/routes, failed imports, failed package consistency checks, unapproved language pairs, missing local resources or unapproved evaluation suites must fail closed. No model weights, corpora or language packages are downloaded by the CLI or package CI.
+
+## Additional runtime-install hardening
+
+- The active package profiles are now checked as a single resolver input (`ai/requirements/runtime.in`) so direct-pin drift or conflicts fail validation.
+- GitHub Actions tests the combined package set in one disposable environment using a SHA-256-hashed lock. When no reviewed lock is committed, the generated lock is uploaded as a non-authoritative candidate; it does not enable persistent installation.
+- `scripts/ai/install_runtime.sh` is prepared as a gated installer: it requires repository authorization, explicit per-run operator approval, a reviewed committed hash lock, a release commit SHA and a mounted writable data volume. It installs into a versioned virtual environment and activates via an atomic symlink change with rollback on failed post-validation.
+- The installer has **not** been executed. The current policy continues to deny persistent installation, and the language/data/suite gates remain closed.
+- Kestra remains a control-plane declaration in this repository. Its current foundation flow logs boundaries; no persistent Kestra deployment or unattended installation is claimed.

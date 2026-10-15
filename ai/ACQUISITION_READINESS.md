@@ -25,3 +25,13 @@ This preparation branch never installs packages to the user's host or persistent
 ## Required evidence before installation approval
 
 A reviewed CI run must pass the registry validator, wiring contract tests, disposable package install/import smoke tests and pip check for each profile. That establishes package/environment readiness only. Real operation additionally requires approved pair models, CLTK resources and evaluation suites, followed by functional tests. No user data, source text, large weights, corpora or language packs are acquired in this phase.
+
+## Combined-runtime and persistence hardening
+
+The AI foundation workflow now also resolves all active profiles together for CPython 3.13 / Linux x86_64. It produces a SHA-256-hashed lock candidate, installs from that lock with pip's `--require-hashes`, runs `pip check`, exact-version/import checks, the routing tests and emits lock, resolver and installed-environment evidence.
+
+If a reviewed lockfile is not committed, CI's generated lock is a temporary candidate only. It is not copied into production or treated as approved. The persistent installer requires the canonical lock at `ai/requirements/locks/runtime-py313-linux-x86_64.txt` plus explicit approval in `ai/acquisition.json`.
+
+The prepared installer is fail-closed and has not been executed. It requires both repository authorization and a separate per-run approval value, a 40-character release commit SHA, Debian 13/Python 3.13, an explicitly mounted writable `/var/lib/gordus-ai`, hash-locked installation, exact package checks, routing tests and a fail-closed post-activation check. It stages a versioned virtual environment, switches the `current` symlink atomically, and restores the prior runtime if post-activation validation fails.
+
+Language packs, CLTK resources, evaluation suites and model weights remain separately gated. A green dependency-resolution job is not task-quality certification.

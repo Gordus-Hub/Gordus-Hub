@@ -41,6 +41,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python 3.13 for manifest validation
         uses: actions/setup-python@v5
@@ -54,9 +56,10 @@ jobs:
           mkdir -p "$RUNNER_TEMP/gordus-ai-evidence"
           python scripts/ai/validate_components.py --repo-root . --report "$RUNNER_TEMP/gordus-ai-evidence/manifest-preflight.json"
           bash -n scripts/ai/preflight.sh
+          bash -n scripts/ai/install_runtime.sh
           python -c 'from pathlib import Path; compile(Path("scripts/ai/validate_components.py").read_text(encoding="utf-8"), "scripts/ai/validate_components.py", "exec")'
-          python -c 'import json, pathlib, os; p=json.loads(pathlib.Path(os.environ["RUNNER_TEMP"] + "/gordus-ai-evidence/manifest-preflight.json").read_text()); assert p["result"] == "PASS_PRECHECK_ONLY", p; assert p["certification"] == "NOT_GRANTED"; assert p["persistent_installation_performed"] is False; assert p["active_components"] == ["argostranslate", "cltk", "inspect-ai"]'
-          sha256sum ai/components.json ai/wiring.json ai/translation/pairs.json ai/linguistics/resources.json ai/evaluation/suites.json ai/requirements/argos-translate.txt ai/requirements/cltk.txt ai/requirements/inspect-ai.txt > "$RUNNER_TEMP/gordus-ai-evidence/source-sha256.txt"
+          python -c 'import json, pathlib, os; p=json.loads(pathlib.Path(os.environ["RUNNER_TEMP"] + "/gordus-ai-evidence/manifest-preflight.json").read_text()); assert p["result"] == "PASS_PRECHECK_ONLY", p; assert p["certification"] == "NOT_GRANTED"; assert p["persistent_installation_performed"] is False; assert p["persistent_installation_ready_by_repository"] is False; assert p["active_components"] == ["argostranslate", "cltk", "inspect-ai"]'
+          sha256sum ai/components.json ai/wiring.json ai/acquisition.json ai/translation/pairs.json ai/linguistics/resources.json ai/evaluation/suites.json ai/requirements/argos-translate.txt ai/requirements/cltk.txt ai/requirements/inspect-ai.txt ai/requirements/runtime.in scripts/ai/install_runtime.sh > "$RUNNER_TEMP/gordus-ai-evidence/source-sha256.txt"
           printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/gordus-ai-evidence/git-sha.txt"
           python --version > "$RUNNER_TEMP/gordus-ai-evidence/host-python.txt"
 
@@ -107,6 +110,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
@@ -165,5 +170,95 @@ jobs:
         with:
           name: ai-three-library-package-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/gordus-ai-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
+  combined-runtime-lock-audit:
+    name: Resolve and test the combined hash-locked runtime
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository without persisting Git credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Prepare runtime evidence directory
+        shell: bash
+        run: mkdir -p "$RUNNER_TEMP/gordus-ai-runtime-evidence"
+
+      - name: Use reviewed lock when present or produce a non-authoritative candidate
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          evidence="$RUNNER_TEMP/gordus-ai-runtime-evidence"
+          committed_lock="ai/requirements/locks/runtime-py313-linux-x86_64.txt"
+          lock="$RUNNER_TEMP/runtime-py313-linux-x86_64.txt"
+
+          if [[ -f "$committed_lock" ]]; then
+            cp "$committed_lock" "$lock"
+            printf '%s\n' 'LOCK_SOURCE=COMMITTED_REPOSITORY_FILE' 'LOCK_REVIEW_STATUS=REQUIRES_EXPLICIT_MANIFEST_APPROVAL' > "$evidence/lock-boundary.txt"
+          else
+            resolver="$RUNNER_TEMP/venv-lock-generator"
+            python -m venv "$resolver"
+            "$resolver/bin/python" -m pip install --no-input --no-cache-dir 'pip-tools==7.6.2'
+            "$resolver/bin/pip-compile" --generate-hashes --resolver=backtracking --strip-extras \
+              --output-file "$lock" ai/requirements/runtime.in
+            printf '%s\n' 'LOCK_SOURCE=GENERATED_CI_CANDIDATE_NOT_COMMITTED' 'LOCK_REVIEW_STATUS=NOT_APPROVED_FOR_PERSISTENT_INSTALLATION' > "$evidence/lock-boundary.txt"
+          fi
+
+          test -s "$lock"
+          grep -Eq -- '--hash=sha256:[0-9a-fA-F]{64}' "$lock"
+          cp "$lock" "$evidence/runtime-py313-linux-x86_64.txt"
+          sha256sum "$lock" ai/requirements/runtime.in ai/components.json ai/wiring.json ai/acquisition.json > "$evidence/source-sha256.txt"
+          printf '%s\n' "$GITHUB_SHA" > "$evidence/git-sha.txt"
+
+      - name: Install the combined runtime using hashes only
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          evidence="$RUNNER_TEMP/gordus-ai-runtime-evidence"
+          venv="$RUNNER_TEMP/venv-gordus-runtime"
+          python -m venv "$venv"
+          "$venv/bin/python" -m pip install --no-input --no-cache-dir \
+            --require-hashes -r "$evidence/runtime-py313-linux-x86_64.txt" \
+            --report "$evidence/pip-install-report.json"
+          "$venv/bin/python" -m pip check
+          "$venv/bin/python" - <<'PY'
+          from importlib.metadata import version
+          from argostranslate import package, translate
+          from cltk import NLP
+          import stanza
+          import inspect_ai
+          expected = {
+              "argostranslate": "1.11.0",
+              "cltk": "2.5.1",
+              "inspect-ai": "0.3.280",
+              "PyYAML": "6.0.2",
+          }
+          for distribution, wanted in expected.items():
+              found = version(distribution)
+              assert found == wanted, f"{distribution}: expected {wanted}, found {found}"
+          assert callable(NLP)
+          assert callable(translate.get_installed_languages)
+          print("Combined imports and exact direct pins: PASS")
+          PY
+          "$venv/bin/inspect" --version
+          PYTHONPATH="ai/runtime" "$venv/bin/python" -m unittest discover -s ai/runtime/tests -v
+          "$venv/bin/python" -m pip freeze > "$evidence/pip-freeze.txt"
+          "$venv/bin/python" -m pip inspect --local > "$evidence/pip-inspect.json"
+          printf '%s\n' 'PERSISTENT_INSTALLATION=false' 'LANGUAGE_DATA_DOWNLOADS=false' 'MODEL_DOWNLOADS=false' 'TASK_CERTIFICATION=NOT_GRANTED' > "$evidence/execution-boundary.txt"
+
+      - name: Upload lock and combined-runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-three-library-runtime-lock-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gordus-ai-runtime-evidence/
           if-no-files-found: warn
           retention-days: 14

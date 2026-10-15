@@ -5,6 +5,12 @@
     "fail_closed": true,
     "install_library_packages_in_ci_temporary_venvs": true,
     "persistent_installation_authorized": false,
+    "reviewed_runtime_hash_lock_approved": false,
+    "persistent_installation_requires_hash_locked_runtime": true,
+    "persistent_installation_requires_mounted_data_volume": true,
+    "persistent_installation_requires_per_run_approval": true,
+    "runtime_activation_is_atomic": true,
+    "rollback_required": true,
     "install_user_host_packages": false,
     "download_argos_language_packs": false,
     "download_cltk_language_resources": false,
@@ -30,13 +36,17 @@
       "requirements": "ai/requirements/inspect-ai.txt"
     }
   ],
+  "runtime_input_file": "ai/requirements/runtime.in",
+  "runtime_lock_file": "ai/requirements/locks/runtime-py313-linux-x86_64.txt",
   "persistent_data_root": "/var/lib/gordus-ai",
   "pending_gates": [
     "user_approval_for_persistent_library_installation",
+    "commit_and_review_python313_linux_x86_64_transitive_hash_lock",
+    "explicit_approval_of_reviewed_runtime_hash_lock",
+    "validate_dedicated_persistent_data_volume_and_permissions",
     "approve_and_hash_each_required_argos_language_direction_package",
     "select_and_approve_CLTK_language_resources_and_treebanks",
     "define_and_review_Inspect_AI_evaluation_suites",
-    "produce_reviewed_hash_locked_transitive_dependency_lockfiles",
     "run_task_level_translation_linguistics_and_evaluation_quality_tests"
   ]
 }
