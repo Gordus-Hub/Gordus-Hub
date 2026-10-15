@@ -30,10 +30,12 @@ run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install \
   system-images/android-36/google_apis/x86_64
 
 # Android 17/API 37 is currently a preview; use the official Beta channel.
+# Preview package identifiers can include the API minor-version suffix.
+# Android 17 is documented as API 37; the SDK repository publishes its preview
+# platform under platforms/android-37.0 (the API identity remains 37).
 run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install --canary \
-  platforms/android-37 \
-  build-tools/37.0.0 \
-  system-images/android-37/google_apis/x86_64
+  platforms/android-37.0 \
+  build-tools/37.0.0
 
 for api in 36 37; do
   test -s "$ANDROID_HOME/platforms/android-$api/android.jar" || {
@@ -61,4 +63,4 @@ printf '\nAndroid SDK installation verified.\n'
 printf 'Debian release: '
 . /etc/os-release
 printf '%s (%s)\n' "$PRETTY_NAME" "${VERSION_CODENAME:-unknown}"
-printf 'Installed Android platform APIs: 36 and 37 (preview)\n'
+printf 'Installed Android platform APIs: 36 and 37.0 (Android 17 preview). API level 37 verified.\n'
