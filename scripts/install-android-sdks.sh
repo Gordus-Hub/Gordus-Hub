@@ -38,16 +38,22 @@ run_with_yes "$ANDROID_CLI" --sdk="$ANDROID_HOME" sdk install --canary \
   build-tools/37.0.0
 
 for api in 36 37; do
-  test -s "$ANDROID_HOME/platforms/android-$api/android.jar" || {
-    echo "ERROR: Android API $api platform is missing or incomplete." >&2
-    exit 1
-  }
-  test -f "$ANDROID_HOME/system-images/android-$api/google_apis/x86_64/package.xml" || {
-    echo "ERROR: Android API $api Google APIs x86_64 system image is missing." >&2
+  if [[ "$api" == "36" ]]; then
+    platform_dir="$ANDROID_HOME/platforms/android-36"
+    image_manifest="$ANDROID_HOME/system-images/android-36/google_apis/x86_64/package.xml"
+    test -f "$image_manifest" || {
+      echo "ERROR: Android 16/API 36 Google APIs x86_64 system image is missing." >&2
+      exit 1
+    }
+  else
+    platform_dir="$ANDROID_HOME/platforms/android-37.0"
+  fi
+
+  test -s "$platform_dir/android.jar" || {
+    echo "ERROR: Android API $api platform is missing or incomplete at $platform_dir." >&2
     exit 1
   }
 done
-
 for version in 36.0.0 37.0.0; do
   test -x "$ANDROID_HOME/build-tools/$version/aapt" || {
     echo "ERROR: Android Build-Tools $version is missing or incomplete." >&2
