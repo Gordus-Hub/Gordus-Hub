@@ -26,12 +26,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: ai-component-foundation-${{ github.ref }}
+  group: ai-three-library-foundation-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  PIP_NO_CACHE_DIR: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
 jobs:
-  manifest-and-debian-preflight:
-    name: Validate registry and Debian 13 foundation
+  manifest-and-contract-preflight:
+    name: Validate three-library registry and fail-closed wiring
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -43,41 +47,36 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Create evidence directory and validate the registry
+      - name: Validate active registry and retired component removal
         shell: bash
         run: |
           set -Eeuo pipefail
           mkdir -p "$RUNNER_TEMP/gordus-ai-evidence"
-          python scripts/ai/validate_components.py --repo-root . \
-            --report "$RUNNER_TEMP/gordus-ai-evidence/manifest-preflight.json"
+          python scripts/ai/validate_components.py --repo-root . --report "$RUNNER_TEMP/gordus-ai-evidence/manifest-preflight.json"
           bash -n scripts/ai/preflight.sh
           python -c 'from pathlib import Path; compile(Path("scripts/ai/validate_components.py").read_text(encoding="utf-8"), "scripts/ai/validate_components.py", "exec")'
-          sha256sum ai/components.json ai/requirements/*.txt \
-            > "$RUNNER_TEMP/gordus-ai-evidence/source-sha256.txt"
+          python -c 'import json, pathlib, os; p=json.loads(pathlib.Path(os.environ["RUNNER_TEMP"] + "/gordus-ai-evidence/manifest-preflight.json").read_text()); assert p["result"] == "PASS_PRECHECK_ONLY", p; assert p["certification"] == "NOT_GRANTED"; assert p["persistent_installation_performed"] is False; assert p["active_components"] == ["argostranslate", "cltk", "inspect-ai"]'
+          sha256sum ai/components.json ai/wiring.json ai/translation/pairs.json ai/linguistics/resources.json ai/evaluation/suites.json ai/requirements/argos-translate.txt ai/requirements/cltk.txt ai/requirements/inspect-ai.txt > "$RUNNER_TEMP/gordus-ai-evidence/source-sha256.txt"
           printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/gordus-ai-evidence/git-sha.txt"
           python --version > "$RUNNER_TEMP/gordus-ai-evidence/host-python.txt"
 
-      - name: Test wiring contracts and capture fail-closed dry run
+      - name: Test routing contracts and capture blocked translation dry run
         shell: bash
         run: |
           set -Eeuo pipefail
           export PYTHONPATH="ai/runtime"
-          python -m unittest discover -s ai/runtime/tests -v \
-            2>&1 | tee "$RUNNER_TEMP/gordus-ai-evidence/wiring-contract-tests.txt"
+          python -m unittest discover -s ai/runtime/tests -v 2>&1 | tee "$RUNNER_TEMP/gordus-ai-evidence/wiring-contract-tests.txt"
           set +e
-          printf '%s\n' '{"request_id":"ci-preflight","task":"translate","text":"probe","parameters":{"source_language":"es","target_language":"en"}}' \
-            | python -m gordus_ai.cli \
-                --manifest ai/components.json --wiring ai/wiring.json \
-                > "$RUNNER_TEMP/gordus-ai-evidence/wiring-dry-run.json"
+          printf '%s\n' '{"request_id":"ci-preflight","task":"translate","text":"probe","parameters":{"source_language":"es","target_language":"en"}}' | python -m gordus_ai.cli --manifest ai/components.json --wiring ai/wiring.json > "$RUNNER_TEMP/gordus-ai-evidence/wiring-dry-run.json"
           cli_status=$?
           set -e
           test "$cli_status" -eq 3
-          python -c 'import json, pathlib; p=json.loads(pathlib.Path("'"$RUNNER_TEMP"'/gordus-ai-evidence/wiring-dry-run.json").read_text()); assert p["status"] == "BLOCKED"; assert p["certification"] == "NOT_GRANTED"; assert p["model_weights_downloaded"] is False; print("Fail-closed wiring CLI: PASS")'
+          python -c 'import json, pathlib, os; p=json.loads(pathlib.Path(os.environ["RUNNER_TEMP"] + "/gordus-ai-evidence/wiring-dry-run.json").read_text()); assert p["status"] == "BLOCKED"; assert p["certification"] == "NOT_GRANTED"; assert p["model_weights_downloaded"] is False; print("Fail-closed wiring CLI: PASS")'
 
-      - name: Build the AI-specific Debian 13 image
+      - name: Build and check isolated Debian 13 AI runtime image
         run: docker build --pull --file ai/runtime/Dockerfile --tag gordus-ai-debian13:ci .
 
-      - name: Run preflight inside Debian 13 without downloading model weights
+      - name: Run preflight in Debian 13 image
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -87,20 +86,22 @@ jobs:
             test "$ID" = "debian"
             test "$VERSION_ID" = "13"
             test "$VERSION_CODENAME" = "trixie"
+            test -d /var/lib/gordus-ai
+            ! test -e /var/cache/huggingface
             bash scripts/ai/preflight.sh /opt/gordus-ai
           ' | tee "$RUNNER_TEMP/gordus-ai-evidence/debian13-preflight.json"
 
-      - name: Upload manifest and Debian preflight evidence
+      - name: Upload contract/preflight evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ai-foundation-preflight-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ai-three-library-preflight-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/gordus-ai-evidence/
           if-no-files-found: warn
           retention-days: 14
 
-  python-package-smoke-tests:
-    name: Install pinned package profiles and record resolution
+  package-smoke-tests:
+    name: Install each library in a disposable cache-free environment
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -111,88 +112,58 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-          cache: pip
-          cache-dependency-path: |
-            ai/requirements/evaluation.txt
-            ai/requirements/translation.txt
-            ai/requirements/model-runtime.txt
-            ai/requirements/ancient.txt
 
       - name: Prepare evidence directories
         run: mkdir -p "$RUNNER_TEMP/gordus-ai-evidence"
-
-      - name: Install and smoke-test Inspect AI profile
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          venv="$RUNNER_TEMP/venv-evaluation"
-          python -m venv "$venv"
-          "$venv/bin/python" -m pip install --disable-pip-version-check \
-            --no-input -r ai/requirements/evaluation.txt
-          "$venv/bin/python" -c 'import inspect_ai, yaml; print("Inspect AI and PyYAML imports: PASS")'
-          "$venv/bin/inspect" --version
-          "$venv/bin/python" -m pip check
-          "$venv/bin/python" -m pip freeze \
-            > "$RUNNER_TEMP/gordus-ai-evidence/evaluation-pip-freeze.txt"
 
       - name: Install and smoke-test Argos Translate library only
         shell: bash
         run: |
           set -Eeuo pipefail
-          venv="$RUNNER_TEMP/venv-translation"
+          venv="$RUNNER_TEMP/venv-argos"
           python -m venv "$venv"
-          "$venv/bin/python" -m pip install --disable-pip-version-check \
-            --no-input -r ai/requirements/translation.txt
+          "$venv/bin/python" -m pip install --no-input -r ai/requirements/argos-translate.txt
           "$venv/bin/python" -c 'import argostranslate, argostranslate.package, argostranslate.translate; from importlib.metadata import version; print("argostranslate=" + version("argostranslate"))'
           "$venv/bin/python" -m pip check
-          "$venv/bin/python" -m pip freeze \
-            > "$RUNNER_TEMP/gordus-ai-evidence/translation-pip-freeze.txt"
-          printf '%s\n' 'ARGOS_LANGUAGE_PACKS_DOWNLOADED=false' \
-            > "$RUNNER_TEMP/gordus-ai-evidence/translation-boundary.txt"
+          "$venv/bin/python" -m pip freeze > "$RUNNER_TEMP/gordus-ai-evidence/argos-pip-freeze.txt"
+          printf '%s\n' 'ARGOS_LANGUAGE_PACKS_DOWNLOADED=false' > "$RUNNER_TEMP/gordus-ai-evidence/argos-boundary.txt"
 
-      - name: Install and smoke-test model runtime libraries only
+      - name: Install and smoke-test CLTK and Stanza backend dependencies only
         shell: bash
         run: |
           set -Eeuo pipefail
-          venv="$RUNNER_TEMP/venv-model-runtime"
+          venv="$RUNNER_TEMP/venv-cltk"
           python -m venv "$venv"
-          "$venv/bin/python" -m pip install --disable-pip-version-check \
-            --no-input -r ai/requirements/model-runtime.txt
-          "$venv/bin/python" -c 'import transformers, sentencepiece, safetensors; print("transformers=" + transformers.__version__); print("sentencepiece=" + sentencepiece.__version__); print("safetensors=" + safetensors.__version__)'
+          "$venv/bin/python" -m pip install --no-input -r ai/requirements/cltk.txt
+          "$venv/bin/python" -c 'from cltk import NLP; import stanza; from importlib.metadata import version; print("cltk=" + version("cltk")); print("stanza=" + version("stanza")); assert callable(NLP)'
           "$venv/bin/python" -m pip check
-          "$venv/bin/python" -m pip freeze \
-            > "$RUNNER_TEMP/gordus-ai-evidence/model-runtime-pip-freeze.txt"
+          "$venv/bin/python" -m pip freeze > "$RUNNER_TEMP/gordus-ai-evidence/cltk-pip-freeze.txt"
+          printf '%s\n' 'CLTK_RESOURCES_DOWNLOADED=false' > "$RUNNER_TEMP/gordus-ai-evidence/cltk-boundary.txt"
 
-      - name: Install and smoke-test CLTK profile
+      - name: Install and smoke-test Inspect AI package only
         shell: bash
         run: |
           set -Eeuo pipefail
-          venv="$RUNNER_TEMP/venv-ancient"
+          venv="$RUNNER_TEMP/venv-inspect-ai"
           python -m venv "$venv"
-          "$venv/bin/python" -m pip install --disable-pip-version-check \
-            --no-input -r ai/requirements/ancient.txt
-          "$venv/bin/python" -c 'import cltk; print("CLTK import: PASS")'
+          "$venv/bin/python" -m pip install --no-input -r ai/requirements/inspect-ai.txt
+          "$venv/bin/python" -c 'import inspect_ai; from importlib.metadata import version; print("inspect-ai=" + version("inspect-ai"))'
+          "$venv/bin/inspect" --version
           "$venv/bin/python" -m pip check
-          "$venv/bin/python" -m pip freeze \
-            > "$RUNNER_TEMP/gordus-ai-evidence/ancient-pip-freeze.txt"
+          "$venv/bin/python" -m pip freeze > "$RUNNER_TEMP/gordus-ai-evidence/inspect-ai-pip-freeze.txt"
+          printf '%s\n' 'INSPECT_AI_SUITES_EXECUTED=false' > "$RUNNER_TEMP/gordus-ai-evidence/inspect-ai-boundary.txt"
 
-      - name: Record final scope boundary
+      - name: Record installation boundary
         if: always()
         shell: bash
         run: |
-          printf '%s\n' \
-            'MODEL_WEIGHTS_DOWNLOADED=false' \
-            'ARGOS_LANGUAGE_PACKS_DOWNLOADED=false' \
-            'MODEL_INFERENCE_TESTED=false' \
-            'CERTIFICATION=NOT_GRANTED' \
-            'TRANSITIVE_LOCKFILES=FOLLOW_UP_GATE' \
-            > "$RUNNER_TEMP/gordus-ai-evidence/execution-boundary.txt"
+          printf '%s\n' 'PIP_CACHE_RESTORE_SAVE=DISABLED' 'PERSISTENT_INSTALLATION=false' 'ARGOS_LANGUAGE_PACKS_DOWNLOADED=false' 'CLTK_RESOURCES_DOWNLOADED=false' 'INSPECT_AI_SUITES_EXECUTED=false' 'MODEL_WEIGHTS_DOWNLOADED=false' 'CERTIFICATION=NOT_GRANTED' 'TRANSITIVE_HASH_LOCKS=FOLLOW_UP_GATE' > "$RUNNER_TEMP/gordus-ai-evidence/execution-boundary.txt"
 
-      - name: Upload package and preflight evidence
+      - name: Upload package/preflight evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ai-component-foundation-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ai-three-library-package-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/gordus-ai-evidence/
           if-no-files-found: warn
           retention-days: 14
