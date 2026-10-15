@@ -56,10 +56,11 @@ for api in 36 37; do
       echo "ERROR: Android 17 platform source.properties is missing." >&2
       exit 1
     }
-    grep -Fqx "AndroidVersion.ApiLevel=37" "$platform_dir/source.properties" || {
+    if ! awk -F= '$1 == "AndroidVersion.ApiLevel" { gsub(/[[:space:]\r]/, "", $2); if ($2 == "37" || $2 == "37.0") found=1 } END { exit !found }' "$platform_dir/source.properties"; then
       echo "ERROR: Android 17 platform metadata does not identify API level 37." >&2
+      grep -E 'AndroidVersion.ApiLevel|AndroidVersion.CodeName|Platform.Version|Pkg.Desc' "$platform_dir/source.properties" || true
       exit 1
-    }
+    fi
   fi
 done
 
