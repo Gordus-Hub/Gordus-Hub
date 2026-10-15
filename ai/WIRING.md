@@ -1,6 +1,6 @@
 # Gordus-Hub: three-library wiring contract
 
-**State:** three-library contract prepared; package-level CI smoke tests are the only validation scope at this stage. No persistent installation or end-to-end linguistic/evaluation capability is certified.
+**State:** three-library contract prepared; package-level CI smoke tests passed. Persistent installation is authorized for the reviewed locked packages but has not been performed; no end-to-end linguistic/evaluation capability is certified.
 
 ## Active component set
 
@@ -21,7 +21,7 @@ The machine-readable route source is ai/wiring.json. The active manifest ai/comp
 - Inspect AI suites are controlled by ai/evaluation/suites.json; its approved suite list is empty. Evaluation is blocked until a specific suite is reviewed and registered.
 - CLTK and Inspect AI routes remain safely blocked while their data/task contracts are incomplete. CI import tests verify packages, not linguistic analyses, document evaluation or accuracy.
 - Evidence includes UTC timestamps, route order, component identity, status and SHA-256 input/output digests. Raw input is not copied to evidence records.
-- Generated code is not executed, model weights are not downloaded, no language packs/resources are downloaded, and package installation in the user's persistent runtime is not authorized by this change.
+- Generated code is not executed, model weights are not downloaded, no language packs/resources are downloaded, and Inspect AI suites are not run. Persistent package installation is authorized only into the managed versioned virtualenv and still requires per-run approval plus a mounted persistent volume.
 
 ## Test contract
 
