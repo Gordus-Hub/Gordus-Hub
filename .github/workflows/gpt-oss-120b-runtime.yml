@@ -1,0 +1,133 @@
+name: GPT-OSS 120B GPU runtime verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_model_len:
+        description: "Maximum model context length for this run"
+        required: true
+        default: "4096"
+      keep_runtime_minutes:
+        description: "How long to keep the inference server alive during this job (1-300)"
+        required: true
+        default: "10"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gpt-oss-120b-gpu-runtime
+  cancel-in-progress: false
+
+jobs:
+  run-full-model:
+    # Requires an administrator-provisioned, persistent self-hosted Linux runner
+    # with Docker, NVIDIA Container Toolkit, and a single >=80 GB GPU (e.g. H100).
+    # GitHub-hosted standard runners do not meet this model's GPU requirements.
+    runs-on: [self-hosted, linux, x64, gpu, gpt-oss-120b]
+    timeout-minutes: 360
+    env:
+      MODEL_ID: openai/gpt-oss-120b
+      CONTAINER_NAME: gpt-oss-120b-runtime
+      MODEL_MAX_LEN: ${{ inputs.max_model_len }}
+      KEEP_MINUTES: ${{ inputs.keep_runtime_minutes }}
+
+    steps:
+      - name: Validate runner and inputs
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$MODEL_MAX_LEN" =~ ^[0-9]+$ ]] && (( MODEL_MAX_LEN >= 1024 && MODEL_MAX_LEN <= 131072 ))
+          [[ "$KEEP_MINUTES" =~ ^[0-9]+$ ]] && (( KEEP_MINUTES >= 1 && KEEP_MINUTES <= 300 ))
+          command -v docker
+          docker info >/dev/null
+          command -v nvidia-smi
+          nvidia-smi
+          python3 - <<'PY'
+          import subprocess
+          raw = subprocess.check_output([
+              "nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"
+          ], text=True)
+          gpus = [line.split(",") for line in raw.splitlines() if line.strip()]
+          if not gpus:
+              raise SystemExit("FAIL: no NVIDIA GPU detected")
+          eligible = [(name.strip(), int(mem.strip())) for name, mem in gpus if int(mem.strip()) >= 75000]
+          if not eligible:
+              raise SystemExit("FAIL: no GPU with >= 75,000 MiB VRAM; full GPT-OSS 120B deployment requires suitable high-memory GPU")
+          print("Eligible GPU(s):", eligible)
+          PY
+
+      - name: Pull official vLLM runtime
+        run: docker pull vllm/vllm-openai:latest
+
+      - name: Start GPT-OSS 120B full model
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+          docker run -d --name "$CONTAINER_NAME" --gpus all --ipc=host \
+            -p 127.0.0.1:8000:8000 \
+            -e HF_HUB_ENABLE_HF_TRANSFER=1 \
+            -v "${HOME}/.cache/huggingface:/root/.cache/huggingface" \
+            vllm/vllm-openai:latest \
+            --model "$MODEL_ID" \
+            --served-model-name gpt-oss-120b \
+            --tensor-parallel-size 1 \
+            --max-model-len "$MODEL_MAX_LEN" \
+            --host 0.0.0.0 --port 8000
+          deadline=$((SECONDS + 3300))
+          until curl --fail --silent http://127.0.0.1:8000/v1/models >/tmp/gpt-oss-models.json; do
+            if ! docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null | grep -qx true; then
+              docker logs "$CONTAINER_NAME" || true
+              exit 1
+            fi
+            if (( SECONDS >= deadline )); then
+              docker logs "$CONTAINER_NAME" || true
+              echo "FAIL: timed out waiting for model weights to load" >&2
+              exit 1
+            fi
+            sleep 15
+          done
+          cat /tmp/gpt-oss-models.json
+          python3 - <<'PY'
+          import json
+          with open("/tmp/gpt-oss-models.json") as f:
+              data = json.load(f)
+          ids = [m.get("id") for m in data.get("data", [])]
+          if "gpt-oss-120b" not in ids:
+              raise SystemExit(f"FAIL: expected served model missing; reported models={ids}")
+          print("PASS: full model server reports gpt-oss-120b")
+          PY
+
+      - name: Run real inference smoke test
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          curl --fail --silent --show-error http://127.0.0.1:8000/v1/chat/completions \
+            -H 'Content-Type: application/json' \
+            -d '{"model":"gpt-oss-120b","messages":[{"role":"user","content":"Reply with exactly: GPT-OSS-120B-INFERENCE-OK"}],"max_tokens":64,"temperature":0}' \
+            -o /tmp/gpt-oss-response.json
+          python3 - <<'PY'
+          import json
+          with open("/tmp/gpt-oss-response.json") as f:
+              data = json.load(f)
+          choices = data.get("choices") or []
+          if not choices:
+              raise SystemExit(f"FAIL: no completion returned: {data}")
+          text = choices[0].get("message", {}).get("content", "")
+          if not text.strip():
+              raise SystemExit("FAIL: inference returned empty content")
+          print("PASS: real inference returned non-empty output")
+          print("Response:", text[:500])
+          PY
+
+      - name: Keep runtime alive for requested test window
+        shell: bash
+        run: sleep "$((KEEP_MINUTES * 60))"
+
+      - name: Always stop temporary test service
+        if: always()
+        shell: bash
+        run: |
+          docker logs "$CONTAINER_NAME" 2>/dev/null | tail -n 150 || true
+          docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
