@@ -1,3 +1,5 @@
+> **Historical/research-only notice (2026-10-15):** This matrix preserves prior candidate research and does not describe the active runtime registry. The active libraries and routes are defined by `ai/components.json` and `ai/wiring.json`; the active set is Argos Translate, CLTK, and Inspect AI only. MADLAD, Qwen3-Coder, Heidelberg-NLP, OPUS-MT and other candidates mentioned below are not active components and are not authorized for download or execution by this document. Do not use historical candidate tables as an installation plan.  
+>  
 # Gorditos linguistic matrix — research and gated implementation plan
 
 **Status:** proposed research matrix; not approved for model acquisition, language-pack downloads, or runtime activation.  
