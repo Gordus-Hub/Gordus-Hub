@@ -1,0 +1,4 @@
+# Direct dependency pins for the evaluation-only virtual environment.
+# Transitive resolution is captured in the GitHub Actions evidence artifact.
+inspect-ai==0.3.280
+PyYAML==6.0.2

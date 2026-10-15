@@ -129,6 +129,48 @@ jobs:
           echo "Timed out waiting for Kestra execution $execution_id."
           exit 1
 
+      - name: Import AI component foundation flow
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --user "admin@kestra.io:$KESTRA_TEST_PASSWORD" -X POST \
+            -H "Content-Type: application/x-yaml" \
+            --data-binary @kestra/flows/gordus_hub.github/ai_component_foundation.yaml \
+            http://127.0.0.1:8080/api/v1/main/flows \
+            -o /tmp/kestra-ai-import.json
+          jq -e '.id == "ai_component_foundation" and .namespace == "gordus_hub.github"' /tmp/kestra-ai-import.json
+
+      - name: Verify AI component foundation flow is loaded
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --user "admin@kestra.io:$KESTRA_TEST_PASSWORD" \
+            http://127.0.0.1:8080/api/v1/main/flows/gordus_hub.github/ai_component_foundation \
+            -o /tmp/kestra-ai-flow.json
+          jq -e '.id == "ai_component_foundation" and .namespace == "gordus_hub.github"' /tmp/kestra-ai-flow.json
+
+      - name: Execute AI foundation flow and require SUCCESS
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --user "admin@kestra.io:$KESTRA_TEST_PASSWORD" -X POST \
+            http://127.0.0.1:8080/api/v1/main/executions/gordus_hub.github/ai_component_foundation)"
+          execution_id="$(printf '%s' "$response" | jq -r '.id // empty')"
+          test -n "$execution_id"
+          for attempt in $(seq 1 60); do
+            status_json="$(curl --fail --silent --show-error --user "admin@kestra.io:$KESTRA_TEST_PASSWORD" \
+              "http://127.0.0.1:8080/api/v1/main/executions/$execution_id")"
+            state="$(printf '%s' "$status_json" | jq -r '.state.current // empty')"
+            echo "AI foundation execution $execution_id state: $state"
+            case "$state" in
+              SUCCESS) exit 0 ;;
+              FAILED|WARNING|KILLING|KILLED|CANCELLED) echo "$status_json"; exit 1 ;;
+            esac
+            sleep 5
+          done
+          echo "Timed out waiting for AI foundation flow execution $execution_id."
+          exit 1
+
       - name: Print Kestra logs on failure
         if: failure()
         run: docker logs kestra-smoke || true
