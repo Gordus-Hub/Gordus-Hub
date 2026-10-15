@@ -1,2 +1,0 @@
-# Library package only; Argos language-pair models are separately governed assets.
-argostranslate==1.11.0

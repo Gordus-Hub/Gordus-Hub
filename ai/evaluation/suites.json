@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "state": "INSPECT_AI_SUITES_NOT_APPROVED",
+  "policy": {
+    "fail_closed": true,
+    "suite_execution_authorized": false,
+    "external_model_calls_authorized": false,
+    "suite_source_review_required": true,
+    "evaluation_is_certification": false
+  },
+  "approved_suites": [],
+  "required_suite_fields": [
+    "id",
+    "task_entrypoint",
+    "model_policy",
+    "dataset_provenance",
+    "scoring_contract",
+    "external_calls_authorized"
+  ],
+  "note": "Inspect AI is installed as an evaluation framework only. Register and review a real task, dataset, scoring contract and model boundary before allowing evaluation execution."
+}

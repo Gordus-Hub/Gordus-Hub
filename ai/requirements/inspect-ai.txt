@@ -1,0 +1,3 @@
+# Inspect AI package profile; task suites are registered separately and not executed by install smoke tests.
+inspect-ai==0.3.280
+PyYAML==6.0.2

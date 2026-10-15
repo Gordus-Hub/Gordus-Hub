@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from pathlib import Path
 from typing import Mapping, Sequence
 
@@ -20,29 +19,14 @@ from .contracts import (
 )
 
 
-SHA40 = re.compile(r"^[0-9a-f]{40}$")
-
-
 def _manifest_gate_codes(component: Mapping[str, object], policy: Mapping[str, object]) -> tuple[str, ...]:
+    """Apply generic package gates only; retired model/research logic is removed."""
     codes: list[str] = []
     component_id = component.get("id")
     if component.get("installation_enabled") is not True:
         codes.append("INSTALLATION_DISABLED")
-    kind = component.get("kind")
-    license_info = component.get("license")
-    license_status = license_info.get("status") if isinstance(license_info, Mapping) else None
-    if kind == "huggingface-model":
-        if policy.get("model_execution_authorized") is not True:
-            codes.append("MODEL_EXECUTION_NOT_AUTHORIZED")
-        if not isinstance(component.get("revision"), str) or not SHA40.fullmatch(str(component.get("revision"))):
-            codes.append("IMMUTABLE_MODEL_REVISION_NOT_PINNED")
-        if license_status != "VERIFIED":
-            codes.append("MODEL_LICENSE_NOT_VERIFIED")
-    elif kind == "research-repository":
-        if not isinstance(component.get("revision"), str) or not SHA40.fullmatch(str(component.get("revision"))):
-            codes.append("IMMUTABLE_SOURCE_REVISION_NOT_PINNED")
-        if license_status != "VERIFIED":
-            codes.append("RESEARCH_ARTIFACT_LICENSE_REVIEW_REQUIRED")
+    if component.get("kind") != "python-package":
+        codes.append("ACTIVE_COMPONENT_KIND_NOT_SUPPORTED")
     if not isinstance(component_id, str) or not component_id:
         codes.append("COMPONENT_ID_INVALID")
     return tuple(dict.fromkeys(codes))

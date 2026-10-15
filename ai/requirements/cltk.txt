@@ -1,0 +1,2 @@
+# CLTK with its local Stanza backend dependency; language-specific models/corpora remain separate assets.
+cltk[stanza]==2.5.1

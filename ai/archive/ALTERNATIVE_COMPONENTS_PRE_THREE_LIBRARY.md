@@ -1,8 +1,10 @@
-# Component difficulty and alternatives assessment
+> ARCHIVED: historical five-component comparison. Preserved for provenance only; not an active registry or installation plan.
+
+# Archived five-component alternatives assessment
 
 **Record:** GH-AI-ALTERNATIVES-001  
-**State:** Argos Translate selected as active translation-library candidate; not runtime-certified.  
-**Policy:** Project direction replaces MADLAD in the active registry with Argos Translate. MADLAD quantized variants remain dormant fallbacks only.
+**State:** historical assessment; not active runtime configuration.  
+**Policy:** content preserved for audit/provenance only. The active component registry is ai/components.json.
 
 ## Finding
 

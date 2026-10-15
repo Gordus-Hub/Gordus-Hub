@@ -11,12 +11,9 @@ from typing import Any, Mapping
 
 KNOWN_TASKS = frozenset({
     "translate",
-    "code_generation",
     "classical_language_analysis",
-    "specialist_ancient_language_analysis",
     "evaluate_output",
     "translate_and_evaluate",
-    "code_and_evaluate",
 })
 MAX_INPUT_CHARS = 1_000_000
 MAX_OUTPUT_CHARS = 2_000_000

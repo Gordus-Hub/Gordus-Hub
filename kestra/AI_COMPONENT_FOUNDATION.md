@@ -1,42 +1,34 @@
-# AI component foundation — governance record
+# Three-library foundation — governance record
 
-**Record:** GH-AI-FOUNDATION-001
-**State:** candidate under validation; not a certified release
-**Scope:** installation foundations for Inspect AI, Argos Translate, Qwen3-Coder, CLTK and Heidelberg-NLP ancient-language-models. Argos replaces MADLAD in the active registry; MADLAD remains dormant fallback only.
+**Record:** GH-AI-FOUNDATION-002  
+**State:** wiring candidate; not a certified operational release  
+**Scope:** Argos Translate, CLTK and Inspect AI package profiles only.
 
 ## Control separation
 
-- Debian 13 AI image: isolated Python 3.13 preflight environment; does not replace the Android Dev Container.
-- GitHub Actions: builds that image, validates the manifest, installs direct package pins into separate virtual environments, executes import/version smoke tests, and stores per-run evidence.
-- Kestra: version-controlled control-plane flow. In the GitHub-only phase, its ephemeral runtime smoke-tests the flow; it does not host models or perform persistent scheduling.
-- Inspect AI: evaluation framework only. It does not independently certify model output or change governance status.
+- Debian 13 AI image: isolated Python 3.13 preflight runtime; the Android Dev Container is unchanged.
+- GitHub Actions: validates the three-package registry and contracts, installs pinned package profiles into disposable virtual environments, runs import/version smoke tests and pip check, and stores per-run evidence.
+- Kestra: control-plane flow only. Its CI engine is ephemeral; this does not claim a persistent Kestra deployment.
+- Argos Translate: library only in the package smoke test. No .argosmodel package is downloaded.
+- CLTK: Python package with Stanza backend dependencies only. No treebank or language resource is downloaded.
+- Inspect AI: framework only. No task suite is executed; evaluation is not independent release certification.
 
 ## Evidence chain
 
-Source revision -> component manifest -> requirements hashes -> environment build -> package installation -> import/version smoke test -> pip check -> pip freeze report -> review decision.
+Source commit -> active manifest/route hashes -> pinned requirement profiles -> clean temporary virtual environment -> installation -> import/version smoke test -> pip check -> captured pip freeze -> review decision.
 
-A preflight PASS means only that the registry and declared package profiles passed the checks that ran. It is not model-inference validation or full component certification.
-
-## Functional wiring preparation
-
-The route contract is stored in `ai/wiring.json` and documented in `ai/WIRING.md`. CI runs standard-library contract tests for route registration, fail-closed gates, request parameter validation, stop-on-first-failure, and SHA-256 provenance. Tests use isolated fake adapters only; the default runtime adapter registry remains unavailable by design. No test claims to have loaded a model or performed inference.
+A package smoke-test pass is not equivalent to translating text, performing a CLTK pipeline, running an Inspect AI suite or certifying output quality.
 
 ## Explicit gates
 
-1. Approve the Argos language-pair matrix, then pin/hash each `.argosmodel` before acquisition. MADLAD is no longer in the active acquisition order. Pin the immutable Qwen model source/profile before acquisition.
-2. Select and pin the Qwen CPU/GPU backend for the target runner. Argos uses CTranslate2 and only installed language pairs.
-3. Confirm model weight sizes against the actual disk and memory budget.
-4. Review the license of every downloaded model, dataset, tokenizer, corpus, and research artifact. The Heidelberg-NLP repository has no repository-level license reported by GitHub; acquisition remains blocked pending per-artifact review.
-5. Generate and review full transitive lockfiles before a production/runtime release. The current CI records resolved package sets as evidence but does not claim a hash-locked dependency closure.
-6. Test actual model inference and task quality in a suitable runtime. GitHub-hosted runner package smoke tests are not a substitute.
-7. Keep rollback, logs, and provenance for each installed profile.
-8. Implement and review real component adapters against the wiring contract; do not replace the current gate-aware defaults with placeholders that report success.
+1. User approval before installation into persistent runtime storage.
+2. Approve each Argos language-direction artifact and record immutable URL, byte size, SHA-256, license and provenance.
+3. Select and approve CLTK/Stanza resource packages, record their files/hashes/licenses and verify offline-only task execution.
+4. Define reviewed Inspect AI task suites, dataset provenance, score contracts and model/network scope.
+5. Generate and review transitive hash-lock files before production use.
+6. Run task-level tests and preserve provenance, rollback instructions and validation evidence.
+7. Keep package acquisition, data acquisition and persistent deployment as separate authorized operations.
 
 ## Failure behavior
 
-A missing dependency pin, invalid component ID, unbounded model revision, failed import, failed package consistency check, or failed flow execution must fail its own check. Model acquisition remains disabled by default. No credentials, external services, Docker socket, or model weights are added by this foundation.
-
-
-## Acquisition readiness audit
-
-The next phase is recorded in [`ai/ACQUISITION_READINESS.md`](../ai/ACQUISITION_READINESS.md) and `ai/acquisition.json`. No Argos language-pair packages or full Qwen weights have been downloaded. Immutable revisions have now been pinned, while execution remains blocked by the standard runner's disk limit, the lack of a persistent model-storage target, unhashed transitive dependency lockfiles, and separate licenses for Heidelberg-linked model/data artifacts. A successful package smoke test does not clear these gates.
+Missing pins, inconsistent requirements, unknown active IDs/routes, failed imports, failed package consistency checks, unapproved language pairs, missing local resources or unapproved evaluation suites must fail closed. No model weights, corpora or language packages are downloaded by the CLI or package CI.

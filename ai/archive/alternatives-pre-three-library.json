@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "state": "ARGOS_TRANSLATION_LIBRARY_SELECTED_FOR_VALIDATION_NOT_CERTIFIED",
+  "state": "ARCHIVED_HISTORICAL_ALTERNATIVE_RESEARCH_NOT_ACTIVE",
   "canonical_component_ids_mutated": true,
   "policy": {
     "fail_closed": true,
@@ -8,7 +8,9 @@
     "automatic_model_substitution": false,
     "source_revision_must_be_pinned_before_download": true,
     "license_review_required": true,
-    "task_quality_eval_required": true
+    "task_quality_eval_required": true,
+    "model_downloads_authorized": false,
+    "runtime_activation_authorized": false
   },
   "recommendations": [
     {

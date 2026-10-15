@@ -1,6 +1,0 @@
-# Transformer/tokenizer profile for the Qwen coding-model candidate only.
-# The active translation component is Argos Translate and has its own profile.
-# PyTorch/backend wheels remain excluded until the target runtime is approved.
-transformers==4.57.6
-sentencepiece==0.2.2
-safetensors==0.8.0

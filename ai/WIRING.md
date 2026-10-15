@@ -1,44 +1,35 @@
-# AI runtime wiring contract
+# Gordus-Hub: three-library wiring contract
 
-**State:** prepared and contract-tested by CI; not runtime-certified.
+**State:** three-library contract prepared; package-level CI smoke tests are the only validation scope at this stage. No persistent installation or end-to-end linguistic/evaluation capability is certified.
 
-This layer defines the stable connection points between the five registered components. It is intentionally separate from model acquisition and from the Android development container.
+## Active component set
 
-## Explicit routes
-
-| Task | Ordered route | Notes |
+| Component | Route | Runtime gate |
 | --- | --- | --- |
-| Translation | Argos Translate library + approved pair package | Requires `source_language` and `target_language`; pair package, SHA-256, license and language matrix must be approved. Automatic pivoting is disabled. |
-| Code generation | Qwen3-Coder | Output is treated as untrusted text. Generated code is never executed by this router. |
-| Classical-language analysis | CLTK | Requires `language`; corpora and task-specific resources are not downloaded automatically. |
-| Specialist ancient-language analysis | Heidelberg-NLP research component | Blocked until per-artifact licensing, resource/runtime, and adapter reviews pass. |
-| Independent evaluation | Inspect AI | Requires a registered `evaluation_suite_id`; evaluation evidence is not certification. |
-| Translation + evaluation | Argos Translate → Inspect AI | Stops at the first blocked or failed step. |
-| Code generation + evaluation | Qwen3-Coder → Inspect AI | Stops at the first blocked or failed step. |
+| Argos Translate (argostranslate 1.11.0) | translate | Requires an approved direct source/target pair plus a locally installed, hash-verified .argosmodel package. No runtime downloads or automatic pivoting. |
+| CLTK (cltk[stanza] 2.5.1) | classical_language_analysis | Requires a selected language profile and locally installed, hash-verified CLTK/Stanza resources. The CLI cannot download language data. |
+| Inspect AI (inspect-ai 0.3.280) | evaluate_output and final step of translate_and_evaluate | Requires an approved evaluation_suite_id backed by a reviewed task definition. Evaluation is evidence, not certification. |
 
-The machine-readable source is `ai/wiring.json`. Route order is explicit; the runtime does not infer hidden dependencies or silently skip blocked steps.
+The machine-readable route source is ai/wiring.json. The active manifest ai/components.json contains exactly these three package libraries. Qwen3-Coder and Heidelberg-NLP are removed from the active runtime, route registry, CI dependency profiles and runtime cache configuration. The prior five-component design remains in Git history and in the separate audit record only.
 
-## Runtime contract
+## Fail-closed policy
 
-- Requests are JSON objects with `request_id`, `task`, `text`, and optional `parameters`.
-- Adapters implement `preflight()` and `invoke(request, input_text)`; adapters are injected explicitly and must pass registry gates before invocation.
-- The CLI registers a real Argos adapter, but it fails closed until `ai/translation/pairs.json` has approved language pairs and corresponding direct-pair packages are installed. CI's fake adapters are test-only.
-- Evidence records input/output SHA-256, UTC step times, component identity, route order, previous component, status, and gate codes. Raw input is not copied into evidence records.
-- The CLI reads one JSON request from standard input and emits one JSON result. A blocked request exits with code 3, rejected input/configuration with code 2, execution failure with code 4, and success with code 0.
-- Model weights and Argos language-pair packages are never downloaded by this CLI. Translation is blocked until the language-pair matrix is approved. Qwen execution remains blocked by its manifest gates; Heidelberg is license-gated. No inference is certified by the wiring tests.
+- Inputs are JSON objects containing request_id, task, text and optional parameters.
+- Every route uses only registered active IDs. Unknown or retired tasks are rejected.
+- Argos is restricted to exact approved directions in ai/translation/pairs.json; that matrix currently has zero approved pairs.
+- CLTK language resources are controlled by ai/linguistics/resources.json; its approved profile list is empty. No resource download may be triggered by this CLI.
+- Inspect AI suites are controlled by ai/evaluation/suites.json; its approved suite list is empty. Evaluation is blocked until a specific suite is reviewed and registered.
+- CLTK and Inspect AI routes remain safely blocked while their data/task contracts are incomplete. CI import tests verify packages, not linguistic analyses, document evaluation or accuracy.
+- Evidence includes UTC timestamps, route order, component identity, status and SHA-256 input/output digests. Raw input is not copied to evidence records.
+- Generated code is not executed, model weights are not downloaded, no language packs/resources are downloaded, and package installation in the user's persistent runtime is not authorized by this change.
 
-## Local contract test
+## Test contract
 
-From the repository root with Python 3.13:
+From the repository root, using Python 3.13 on Debian 13, run:
+    PYTHONPATH=ai/runtime python -m unittest discover -s ai/runtime/tests -v
 
-```bash
-PYTHONPATH=ai/runtime python -m unittest discover -s ai/runtime/tests -v
-printf '%s\n' '{"request_id":"local-check-1","task":"translate","text":"Hola","parameters":{"source_language":"es","target_language":"en"}}' \
-  | PYTHONPATH=ai/runtime python -m gordus_ai.cli
-```
+A sample translation request is expected to return BLOCKED until selected language-pair artifacts and the corresponding approvals exist. This is an expected gate, not proof of translation quality.
 
-The second command should emit `status=BLOCKED` in JSON and exit with code 3 until the real gates and an approved adapter implementation are in place. That is the intended fail-closed outcome, not a runtime test failure.
+## Before operational release
 
-## What remains outside this phase
-
-Argos language-pair approval and package hashes, Qwen inference adapter and immutable model revision, per-artifact license review, full transitive hash lockfiles, backend/precision selection, weight artifact manifests, task/evaluation suites, resource budgets, and end-to-end quality tests must be completed and reviewed before activating inference.
+The separately approved phase must approve each language-direction artifact and its immutable URL, byte size, SHA-256 and license; provision CLTK/Stanza resources from reviewed local assets; define an evaluation suite and its execution/model boundary; validate transitive dependency lockfiles; and run real task-level quality tests. Persistent data belongs under an explicitly mounted /var/lib/gordus-ai store; this branch does not install packages into that store.

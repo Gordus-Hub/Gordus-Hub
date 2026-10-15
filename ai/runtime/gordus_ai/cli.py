@@ -1,4 +1,4 @@
-"""JSON-lines-friendly CLI for governed requests; blocked requests exit with code 3."""
+"""JSON-lines CLI for governed three-library requests; blocked requests exit with code 3."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from .argos_adapter import ArgosTranslateAdapter
+from .adapters import UnavailableAdapter
 from .contracts import WorkRequest
 from .orchestrator import GordusOrchestrator
 
@@ -24,11 +25,14 @@ def main() -> int:
         orchestrator = GordusOrchestrator.from_files(
             Path(args.manifest),
             Path(args.wiring),
-            adapters={"argostranslate": ArgosTranslateAdapter()},
+            adapters={
+                "argostranslate": ArgosTranslateAdapter(),
+                "cltk": UnavailableAdapter("cltk", ("CLTK_RESOURCE_PROFILE_NOT_APPROVED",)),
+                "inspect-ai": UnavailableAdapter("inspect-ai", ("INSPECT_AI_SUITE_NOT_REGISTERED",)),
+            },
         )
         result = orchestrator.run(request)
     except (ValueError, OSError) as exc:
-        # Do not echo request text or values that might contain secrets.
         sys.stdout.write(json.dumps({
             "record_type": "GORDUS_AI_WIRING_RUN",
             "status": "REJECTED",

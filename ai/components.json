@@ -1,100 +1,64 @@
 {
   "schema_version": 1,
   "project": "Gordus-Hub/Gordus-Hub",
-  "state": "ARGOS_TRANSLATION_LIBRARY_CANDIDATE_NOT_CERTIFIED",
+  "state": "THREE_LIBRARY_WIRING_CANDIDATE_NOT_RUNTIME_CERTIFIED",
   "policy": {
     "installation_mode": "isolated-venvs",
-    "model_weight_downloads_in_ci": false,
-    "model_execution_authorized": false,
     "fail_closed": true,
     "evidence_required": true,
-    "mutable_model_revision_allowed": false
+    "mutable_package_versions_allowed": false,
+    "persistent_installation_authorized": false,
+    "model_weight_downloads_in_ci": false,
+    "model_execution_authorized": false,
+    "argos_language_package_downloads_in_ci": false,
+    "cltk_language_resource_downloads_in_ci": false,
+    "inspect_ai_suite_execution_authorized": false
   },
   "components": [
     {
-      "id": "inspect-ai",
-      "kind": "python-package",
-      "priority": 1,
-      "source": "https://github.com/UKGovernmentBEIS/inspect_ai",
-      "package": "inspect-ai",
-      "package_version": "0.3.280",
-      "requirements_file": "ai/requirements/evaluation.txt",
-      "license": {
-        "value": "MIT",
-        "status": "DECLARED"
-      },
-      "installation_enabled": true,
-      "smoke_test": "import inspect_ai",
-      "scope": "evaluation framework only; not a certification authority"
-    },
-    {
       "id": "argostranslate",
       "kind": "python-package",
-      "priority": 1,
       "source": "https://github.com/argosopentech/argos-translate",
       "package": "argostranslate",
       "package_version": "1.11.0",
-      "requirements_file": "ai/requirements/translation.txt",
+      "requirements_file": "ai/requirements/argos-translate.txt",
       "license": {
         "value": "MIT OR CC0",
         "status": "LIBRARY_LICENSE_DECLARED_MODEL_PACK_METADATA_REQUIRES_PER_ASSET_REVIEW"
       },
       "installation_enabled": true,
       "smoke_test": "import argostranslate, argostranslate.package, argostranslate.translate",
-      "language_package_registry": "ai/translation/pairs.json",
-      "scope": "offline Python translation library; the wheel is small, but each supported language direction needs a separate model package; do not claim MADLAD-equivalent 419-language coverage"
-    },
-    {
-      "id": "qwen3-coder-30b-a3b-instruct",
-      "kind": "huggingface-model",
-      "priority": 1,
-      "source": "https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct",
-      "package": null,
-      "package_version": null,
-      "requirements_file": "ai/requirements/model-runtime.txt",
-      "revision": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
-      "expected_snapshot_size_label": "61.1 GB",
-      "expected_weight_shards": 16,
-      "license": {
-        "value": "Apache-2.0",
-        "status": "DECLARED_NOT_INDEPENDENTLY_AUDITED"
-      },
-      "installation_enabled": false,
-      "smoke_test": null,
-      "gate": "REVIEW_LICENSE_RESOURCE_BUDGET_BACKEND_AND_PERSISTENT_STORAGE",
-      "scope": "coding candidate; full snapshot is about 61.1 GB; package smoke test does not load model weights"
+      "scope": "offline translation library; only individually approved direct-pair .argosmodel assets may be added later"
     },
     {
       "id": "cltk",
       "kind": "python-package",
-      "priority": 2,
       "source": "https://github.com/cltk/cltk",
       "package": "cltk",
       "package_version": "2.5.1",
-      "requirements_file": "ai/requirements/ancient.txt",
+      "requirements_file": "ai/requirements/cltk.txt",
       "license": {
         "value": "MIT",
         "status": "DECLARED"
       },
       "installation_enabled": true,
-      "smoke_test": "import cltk",
-      "scope": "general premodern-language NLP library; no language corpora downloaded in CI"
+      "smoke_test": "from cltk import NLP",
+      "scope": "classical-language NLP; local resource profiles must be approved and present before analysis; no automatic resource download"
     },
     {
-      "id": "heidelberg-ancient-language-models",
-      "kind": "research-repository",
-      "priority": 2,
-      "source": "https://github.com/Heidelberg-NLP/ancient-language-models",
-      "revision": "26b34a912bdbfd45089cb2e8b5b39b38a538c54c",
+      "id": "inspect-ai",
+      "kind": "python-package",
+      "source": "https://github.com/UKGovernmentBEIS/inspect_ai",
+      "package": "inspect-ai",
+      "package_version": "0.3.280",
+      "requirements_file": "ai/requirements/inspect-ai.txt",
       "license": {
         "value": "MIT",
-        "status": "DECLARED_IN_PYPROJECT_EXTERNAL_ASSETS_UNREVIEWED"
+        "status": "DECLARED"
       },
-      "python_requires": "==3.12.*",
-      "installation_enabled": false,
-      "smoke_test": null,
-      "gate": "REVIEW_LICENSES_OF_LINKED_MODELS_DATASETS_AND_CORPORA_BEFORE_ACQUISITION",
-      "scope": "research code declares MIT in pyproject.toml; separately hosted pretrained models and treebanks are not bundled and require individual review"
+      "installation_enabled": true,
+      "smoke_test": "import inspect_ai",
+      "scope": "evaluation framework only; suite definitions require explicit review and results do not constitute certification"
     }
   ]
 }

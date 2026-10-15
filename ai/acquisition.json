@@ -1,70 +1,42 @@
 {
   "schema_version": 1,
-  "state": "BLOCKED_BEFORE_DOWNLOAD",
+  "state": "THREE_LIBRARY_WIRING_PENDING_USER_INSTALL_APPROVAL",
   "policy": {
     "fail_closed": true,
-    "download_all_before_install": true,
-    "install_in_declared_order": true,
-    "use_only_github_hosted_runners": true,
-    "self_hosted_runner_allowed": false,
-    "upload_model_weights_as_actions_artifacts": false,
-    "persistent_storage_target": null,
-    "model_execution_authorized": false
+    "install_library_packages_in_ci_temporary_venvs": true,
+    "persistent_installation_authorized": false,
+    "install_user_host_packages": false,
+    "download_argos_language_packs": false,
+    "download_cltk_language_resources": false,
+    "execute_inspect_ai_suites": false,
+    "download_model_weights": false,
+    "use_self_hosted_runner": false,
+    "upload_large_model_or_data_artifacts_as_actions_artifacts": false
   },
-  "chronological_order": {
-    "download": [
-      "inspect-ai",
-      "argostranslate",
-      "qwen3-coder-30b-a3b-instruct",
-      "cltk",
-      "heidelberg-ancient-language-models"
-    ],
-    "install": [
-      "inspect-ai",
-      "argostranslate",
-      "qwen3-coder-30b-a3b-instruct",
-      "cltk",
-      "heidelberg-ancient-language-models"
-    ]
-  },
-  "source_pins": {
-    "qwen3_coder_30b_a3b_instruct": {
-      "repository": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-      "revision": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
-      "approximate_full_snapshot_gib": 61.1,
-      "weight_shards": 16
+  "active_package_order": [
+    {
+      "id": "argostranslate",
+      "version": "1.11.0",
+      "requirements": "ai/requirements/argos-translate.txt"
     },
-    "heidelberg_ancient_language_models": {
-      "repository": "Heidelberg-NLP/ancient-language-models",
-      "revision": "26b34a912bdbfd45089cb2e8b5b39b38a538c54c",
-      "code_license_declared_in_pyproject": "MIT",
-      "external_models_and_treebanks": "LICENSE_REVIEW_REQUIRED"
+    {
+      "id": "cltk",
+      "version": "2.5.1",
+      "requirements": "ai/requirements/cltk.txt"
     },
-    "argostranslate": {
-      "repository": "argosopentech/argos-translate",
-      "package_version": "1.11.0",
-      "python_wheel_size_bytes_approx": 41600,
-      "library_license": "MIT_OR_CC0",
-      "language_package_size_average_bytes_approx": 100000000,
-      "language_package_downloads": "BLOCKED_UNTIL_APPROVED_PAIR_MATRIX_AND_PER_ARTIFACT_HASH_REVIEW"
+    {
+      "id": "inspect-ai",
+      "version": "0.3.280",
+      "requirements": "ai/requirements/inspect-ai.txt"
     }
-  },
-  "resource_gate": {
-    "observed_standard_runner_ssd_gib": 14,
-    "minimum_free_disk_bytes": 110000000000,
-    "recommended_ram_gib_for_full_checkpoint_load_tests": 128,
-    "reason": "The active large checkpoint is Qwen3-Coder at about 61.1 GB; Argos is a small Python library but needs separate language-pair packages (about 100 MB on average). A conservative 110 GB free-space gate remains until the Qwen artifact/profile and temporary download footprint are selected."
-  },
-  "required_gates": [
-    "configure_and_confirm_GitHub_hosted_larger_runner",
-    "confirm_runner_has_required_free_disk_and_RAM",
-    "commit_reviewed_hash_locked_transitive_dependency_lockfiles",
-    "select_and_pin_CPU_or_GPU_backend",
-    "review_each_Heidelberg_linked_model_and_treebank_license",
-    "configure_approved_persistent_model_storage_or_accept_ephemeral_test_only_execution",
-    "implement_real_component_adapters_and_model_load_tests",
-    "approve_argostranslate_language_pair_matrix",
-    "pin_and_hash_each_argos_language_package_before_download",
-    "review_each_argos_language_package_license_and_provenance"
+  ],
+  "persistent_data_root": "/var/lib/gordus-ai",
+  "pending_gates": [
+    "user_approval_for_persistent_library_installation",
+    "approve_and_hash_each_required_argos_language_direction_package",
+    "select_and_approve_CLTK_language_resources_and_treebanks",
+    "define_and_review_Inspect_AI_evaluation_suites",
+    "produce_reviewed_hash_locked_transitive_dependency_lockfiles",
+    "run_task_level_translation_linguistics_and_evaluation_quality_tests"
   ]
 }

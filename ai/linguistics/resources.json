@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "state": "CLTK_RESOURCE_PROFILES_NOT_APPROVED",
+  "policy": {
+    "fail_closed": true,
+    "automatic_resource_downloads": false,
+    "remote_backends_allowed": false,
+    "resource_sha256_required": true,
+    "resource_license_review_required": true
+  },
+  "resource_root": "/var/lib/gordus-ai",
+  "required_profile_fields": [
+    "id",
+    "language",
+    "language_code",
+    "backend",
+    "stanza_resources_dir",
+    "required_files"
+  ],
+  "approved_profiles": [],
+  "note": "CLTK and Stanza packages can be smoke-tested without downloading treebanks. Add a profile only after every local resource has a source, byte size, SHA-256 and license review; task execution must operate offline."
+}
