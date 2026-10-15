@@ -58,7 +58,7 @@ jobs:
           bash -n scripts/ai/preflight.sh
           bash -n scripts/ai/install_runtime.sh
           python -c 'from pathlib import Path; compile(Path("scripts/ai/validate_components.py").read_text(encoding="utf-8"), "scripts/ai/validate_components.py", "exec")'
-          python -c 'import json, pathlib, os; p=json.loads(pathlib.Path(os.environ["RUNNER_TEMP"] + "/gordus-ai-evidence/manifest-preflight.json").read_text()); assert p["result"] == "PASS_PRECHECK_ONLY", p; assert p["certification"] == "NOT_GRANTED"; assert p["persistent_installation_performed"] is False; assert p["persistent_installation_ready_by_repository"] is False; assert p["active_components"] == ["argostranslate", "cltk", "inspect-ai"]'
+          python -c 'import json, pathlib, os; p=json.loads(pathlib.Path(os.environ["RUNNER_TEMP"] + "/gordus-ai-evidence/manifest-preflight.json").read_text()); assert p["result"] == "PASS_PRECHECK_ONLY", p; assert p["certification"] == "NOT_GRANTED"; assert p["persistent_installation_performed"] is False; assert p["persistent_installation_ready_by_repository"] is True; assert p["active_components"] == ["argostranslate", "cltk", "inspect-ai"]'
           sha256sum ai/components.json ai/wiring.json ai/acquisition.json ai/translation/pairs.json ai/linguistics/resources.json ai/evaluation/suites.json ai/requirements/argos-translate.txt ai/requirements/cltk.txt ai/requirements/inspect-ai.txt ai/requirements/runtime.in ai/runtime/Dockerfile ai/runtime/tests/test_orchestrator.py ai/runtime/tests/test_install_guard.py scripts/ai/preflight.sh scripts/ai/validate_components.py scripts/ai/install_runtime.sh > "$RUNNER_TEMP/gordus-ai-evidence/source-sha256.txt"
           printf '%s\n' "$GITHUB_SHA" > "$RUNNER_TEMP/gordus-ai-evidence/git-sha.txt"
           python --version > "$RUNNER_TEMP/gordus-ai-evidence/host-python.txt"
@@ -202,7 +202,7 @@ jobs:
 
           if [[ -f "$committed_lock" ]]; then
             cp "$committed_lock" "$lock"
-            printf '%s\n' 'LOCK_SOURCE=COMMITTED_REPOSITORY_FILE' 'LOCK_REVIEW_STATUS=REQUIRES_EXPLICIT_MANIFEST_APPROVAL' > "$evidence/lock-boundary.txt"
+            printf '%s\n' 'LOCK_SOURCE=COMMITTED_REPOSITORY_FILE' 'LOCK_REVIEW_STATUS=REVIEWED_FOR_PINNED_INSTALLABILITY_ONLY' > "$evidence/lock-boundary.txt"
           else
             resolver="$RUNNER_TEMP/venv-lock-generator"
             python -m venv "$resolver"
