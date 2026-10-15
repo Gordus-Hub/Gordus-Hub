@@ -270,7 +270,7 @@ jobs:
 
   materialize-library-wheelhouse:
     name: Materialize persistent wheelhouse for the three Python libraries
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'refactor/three-library-wiring-2026-10-15' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
@@ -280,6 +280,18 @@ jobs:
       GORDUS_AI_RELEASE_TAG: gordus-ai-python313-linux-x86_64-${{ github.event.pull_request.head.sha }}
       GORDUS_AI_LOCK: ai/requirements/locks/runtime-py313-linux-x86_64.txt
     steps:
+      - name: Enforce trusted materialization branch before repository checkout
+        env:
+          EXPECTED_HEAD_REF: refactor/three-library-wiring-2026-10-15
+          EXPECTED_HEAD_REPO: Gordus-Hub/Gordus-Hub
+          ACTUAL_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          ACTUAL_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$ACTUAL_HEAD_REF" == "$EXPECTED_HEAD_REF" ]] || { echo "Untrusted PR branch; refusing package publication." >&2; exit 1; }
+          [[ "$ACTUAL_HEAD_REPO" == "$EXPECTED_HEAD_REPO" ]] || { echo "Fork PR; refusing package publication." >&2; exit 1; }
+
       - name: Check out the exact PR head commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # pinned v4 tag
         with:
