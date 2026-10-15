@@ -1,6 +1,8 @@
 # Combined runtime input for CPython 3.13 / Linux x86_64.
+# Includes explicit setuptools pin required by the combined --require-hashes install path.
 # The generated transitive lock must be reviewed and committed before persistent installation.
 argostranslate==1.11.0
 cltk[stanza]==2.5.1
 inspect-ai==0.3.280
 PyYAML==6.0.2
+setuptools==84.0.0

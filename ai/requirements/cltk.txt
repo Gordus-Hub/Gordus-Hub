@@ -1,2 +1,4 @@
 # CLTK with its local Stanza backend dependency; language-specific models/corpora remain separate assets.
+# Explicit runtime support pin for the spaCy dependency observed in the combined --require-hashes install.
 cltk[stanza]==2.5.1
+setuptools==84.0.0
