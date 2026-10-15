@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "state": "PROPOSED_RESEARCH_MATRIX_NOT_APPROVED",
+  "purpose": "Define language variants, candidate coverage, and validation gates without authorizing model or language-pack downloads.",
+  "policy": {
+    "fail_closed": true,
+    "model_downloads_enabled": false,
+    "argos_language_package_downloads_enabled": false,
+    "model_execution_authorized": false,
+    "automatic_pivot_translation": false,
+    "direct_pair_only_for_active_argos_adapter": true,
+    "per_artifact_revision_sha256_size_and_license_review_required": true,
+    "ancient_language_translation_requires_human_review": true,
+    "analysis_and_translation_are_separate_capabilities": true
+  },
+  "language_inventory": [
+    {
+      "id": "es",
+      "name": "Spanish",
+      "variant": "Modern Spanish",
+      "script": "Latin",
+      "translation": "CANDIDATE",
+      "analysis": "GENERAL_TEXT_ANALYSIS",
+      "argos_candidate_code": "es",
+      "candidate_directions": ["en->es", "es->en"],
+      "coverage_evidence": "Official Argos package index lists English-Spanish and Spanish-English packages; exact package artifacts remain unpinned and unapproved.",
+      "gate": "VERIFY_CURRENT_INDEX_ARTIFACT_URL_SIZE_SHA256_AND_LICENSE"
+    },
+    {
+      "id": "en",
+      "name": "English",
+      "variant": "Modern English; proposed hub language, not an implicit pivot",
+      "script": "Latin",
+      "translation": "CANDIDATE",
+      "analysis": "GENERAL_TEXT_ANALYSIS",
+      "argos_candidate_code": "en",
+      "candidate_directions": ["en->es", "es->en", "en->pt", "pt->en", "en->ru", "ru->en", "en->ko", "ko->en", "en->zh", "zh->en", "en->zt", "zt->en", "en->ja", "ja->en"],
+      "coverage_evidence": "Argos index lists English as a source or target for the listed modern-language packages. Cross-language pivoting is not authorized.",
+      "gate": "VERIFY_EACH_DIRECTION_IN_PINNED_INDEX_SNAPSHOT"
+    },
+    {
+      "id": "pt",
+      "name": "Portuguese",
+      "variant": "Portuguese; regional variant to be pinned per artifact (pt and Brazilian Portuguese pb are distinct in Argos index)",
+      "script": "Latin",
+      "translation": "CANDIDATE",
+      "analysis": "GENERAL_TEXT_ANALYSIS",
+      "argos_candidate_code": "pt",
+      "candidate_directions": ["en->pt", "pt->en"],
+      "coverage_evidence": "Official Argos index lists en->pt and pt->en; Brazilian Portuguese is separately coded pb.",
+      "gate": "CONFIRM_REQUIRED_VARIANT_AND_ARTIFACT_LICENSE"
+    },
+    {
+      "id": "ru",
+      "name": "Russian",
+      "variant": "Modern Russian",
+      "script": "Cyrillic",
+      "translation": "CANDIDATE",
+      "analysis": "GENERAL_TEXT_ANALYSIS",
+      "argos_candidate_code": "ru",
+      "candidate_directions": ["en->ru", "ru->en"],
+      "coverage_evidence": "Official Argos index lists English-Russian directions.",
+      "gate": "VERIFY_CURRENT_INDEX_ARTIFACT_URL_SIZE_SHA256_AND_LICENSE"
+    },
+    {
+      "id": "ko",
+      "name": "Korean",
+      "variant": "Modern Korean",
+      "script": "Hangul",
+      "translation": "CANDIDATE",
+      "analysis": "GENERAL_TEXT_ANALYSIS",
+      "argos_candidate_code": "ko",
+      "candidate_directions": ["en->ko", "ko->en"],
+      "coverage_evidence": "Official Argos index lists English-Korean directions.",
+      "gate": "VERIFY_CURRENT_INDEX_ARTIFACT_URL_SIZE_SHA256_AND_LICENSE"
+    },
+    {
+      "id": "zh",
+      "name": "Chinese",
+      "variant": "Simplified Chinese",
+      "script": "Han; Simplified",
+      "translation": "CANDIDATE",
+      "analysis": "GENERAL_TEXT_ANALYSIS",
+      "argos_candidate_code": "zh",
+      "candidate_directions": ["en->zh", "zh->en"],
+      "coverage_evidence": "Argos index distinguishes Chinese (zh) from Traditional Chinese (zt). Treat zh as the Simplified candidate only after confirming package metadata.",
+      "gate": "VERIFY_SCRIPT_VARIANT_AND_PACKAGE_METADATA"
+    },
+    {
+      "id": "zt",
+      "name": "Chinese",
+      "variant": "Traditional Chinese",
+      "script": "Han; Traditional",
+      "translation": "CANDIDATE",
+      "analysis": "GENERAL_TEXT_ANALYSIS",
+      "argos_candidate_code": "zt",
+      "candidate_directions": ["en->zt", "zt->en"],
+      "coverage_evidence": "Official Argos index explicitly labels zt as Chinese (traditional).",
+      "gate": "VERIFY_SCRIPT_VARIANT_AND_PACKAGE_METADATA"
+    },
+    {
+      "id": "ja",
+      "name": "Japanese",
+      "variant": "Modern Japanese",
+      "script": "Japanese scripts",
+      "translation": "CANDIDATE",
+      "analysis": "GENERAL_TEXT_ANALYSIS",
+      "argos_candidate_code": "ja",
+      "candidate_directions": ["en->ja", "ja->en"],
+      "coverage_evidence": "Official Argos index lists English-Japanese directions.",
+      "gate": "VERIFY_CURRENT_INDEX_ARTIFACT_URL_SIZE_SHA256_AND_LICENSE"
+    },
+    {
+      "id": "grc",
+      "name": "Ancient Greek",
+      "variant": "Koine Greek",
+      "script": "Greek",
+      "translation": "SPECIALIST_CANDIDATE_NOT_VERIFIED",
+      "analysis": "CLTK_ANALYSIS_CANDIDATE",
+      "argos_candidate_code": null,
+      "candidate_directions": [],
+      "coverage_evidence": "Argos modern Greek code el is not evidence for Koine Greek. CLTK is a relevant analysis candidate for Greek; translation model coverage and licenses require separate proof.",
+      "gate": "REQUIRE_KOINE_CORPUS_EVALUATION_AND_SPECIALIST_TRANSLATION_MODEL_REVIEW"
+    },
+    {
+      "id": "hbo",
+      "name": "Ancient Hebrew",
+      "variant": "Biblical / Ancient Hebrew",
+      "script": "Hebrew",
+      "translation": "SPECIALIST_CANDIDATE_NOT_VERIFIED",
+      "analysis": "SPECIALIST_NLP_CANDIDATE",
+      "argos_candidate_code": null,
+      "candidate_directions": [],
+      "coverage_evidence": "Argos modern Hebrew code he is not evidence for Ancient/Biblical Hebrew. Do not equate modern Hebrew packages with Biblical Hebrew translation.",
+      "gate": "REQUIRE_BIBLICAL_HEBREW_CORPUS_EVALUATION_AND_MODEL_LICENSE_REVIEW"
+    },
+    {
+      "id": "la",
+      "name": "Latin",
+      "variant": "Classical and Late Latin; period must be tagged per task",
+      "script": "Latin",
+      "translation": "SPECIALIST_CANDIDATE_NOT_VERIFIED",
+      "analysis": "CLTK_ANALYSIS_CANDIDATE",
+      "argos_candidate_code": null,
+      "candidate_directions": [],
+      "coverage_evidence": "CLTK is a relevant Latin analysis candidate. No Argos Latin package was established by the reviewed package-index evidence.",
+      "gate": "REQUIRE_PERIOD_TAGGED_TEST_SET_AND_TRANSLATION_MODEL_REVIEW"
+    },
+    {
+      "id": "syc",
+      "name": "Syriac",
+      "variant": "Classical Syriac",
+      "script": "Syriac",
+      "translation": "SPECIALIST_CANDIDATE_NOT_VERIFIED",
+      "analysis": "SPECIALIST_NLP_CANDIDATE",
+      "argos_candidate_code": null,
+      "candidate_directions": [],
+      "coverage_evidence": "No verified Argos Syriac package or specialist model artifact is approved in this change.",
+      "gate": "REQUIRE_SYRIAC_SPECIFIC_CORPUS_MODEL_AND_LICENSE_REVIEW"
+    },
+    {
+      "id": "arc",
+      "name": "Aramaic",
+      "variant": "Biblical Aramaic",
+      "script": "Hebrew/Aramaic script",
+      "translation": "SPECIALIST_CANDIDATE_NOT_VERIFIED",
+      "analysis": "SPECIALIST_NLP_CANDIDATE",
+      "argos_candidate_code": null,
+      "candidate_directions": [],
+      "coverage_evidence": "Biblical Aramaic is distinct from Syriac and modern Hebrew. No verified Argos package or specialist model artifact is approved in this change.",
+      "gate": "REQUIRE_BIBLICAL_ARAMAIC_SPECIFIC_CORPUS_MODEL_AND_LICENSE_REVIEW"
+    }
+  ],
+  "routing_policy": {
+    "modern_languages": "Use individually approved direct Argos pairs where available; do not silently route through English. A future explicit multi-hop route requires a separately reviewed policy, per-hop evidence, and quality tests.",
+    "ancient_languages": "Separate translation and linguistic-analysis routes. CLTK may support tokenization, lemmatization, morphology or corpus workflows where available; it is not by itself a machine-translation engine.",
+    "unsupported_or_unverified_pair": "Return BLOCKED with a stable gate code; never fall back silently to a different language variant or model.",
+    "candidate_pair_registry": "ai/translation/pairs.json remains the runtime authorization source and must remain unapproved/empty until artifact-level gates pass."
+  },
+  "acceptance_gates": [
+    "Pin a dated upstream package-index snapshot and immutable source revision.",
+    "For every proposed artifact, record direct source URL, version, byte size, SHA-256, license and provenance.",
+    "Test both directions independently; do not infer reverse-direction availability from one direction.",
+    "Create versioned evaluation fixtures for each language and dialect, including named-entity, morphology, ambiguity and domain-specific cases.",
+    "For ancient languages, have a qualified reviewer score translation fidelity and linguistic-analysis outputs against cited editions or annotated corpora.",
+    "Measure cold-start RAM, steady-state RAM, CPU latency, temporary disk and installed disk in a Debian 13 Python 3.12/3.13 isolated profile.",
+    "Run CI contract tests proving unsupported pairs are blocked and no model artifact downloads occur before approval.",
+    "Only a separate explicit approval may move a pair into ai/translation/pairs.json."
+  ]
+}

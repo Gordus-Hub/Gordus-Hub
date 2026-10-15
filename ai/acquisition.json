@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "state": "THREE_LIBRARY_WIRING_PENDING_USER_INSTALL_APPROVAL",
+  "policy": {
+    "fail_closed": true,
+    "install_library_packages_in_ci_temporary_venvs": true,
+    "persistent_installation_authorized": false,
+    "install_user_host_packages": false,
+    "download_argos_language_packs": false,
+    "download_cltk_language_resources": false,
+    "execute_inspect_ai_suites": false,
+    "download_model_weights": false,
+    "use_self_hosted_runner": false,
+    "upload_large_model_or_data_artifacts_as_actions_artifacts": false
+  },
+  "active_package_order": [
+    {
+      "id": "argostranslate",
+      "version": "1.11.0",
+      "requirements": "ai/requirements/argos-translate.txt"
+    },
+    {
+      "id": "cltk",
+      "version": "2.5.1",
+      "requirements": "ai/requirements/cltk.txt"
+    },
+    {
+      "id": "inspect-ai",
+      "version": "0.3.280",
+      "requirements": "ai/requirements/inspect-ai.txt"
+    }
+  ],
+  "persistent_data_root": "/var/lib/gordus-ai",
+  "pending_gates": [
+    "user_approval_for_persistent_library_installation",
+    "approve_and_hash_each_required_argos_language_direction_package",
+    "select_and_approve_CLTK_language_resources_and_treebanks",
+    "define_and_review_Inspect_AI_evaluation_suites",
+    "produce_reviewed_hash_locked_transitive_dependency_lockfiles",
+    "run_task_level_translation_linguistics_and_evaluation_quality_tests"
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "state": "PREPARED_NOT_RUNTIME_CERTIFIED",
+  "state": "THREE_LIBRARY_WIRING_PREPARED_NOT_RUNTIME_CERTIFIED",
   "execution_policy": {
     "fail_closed": true,
     "stop_on_first_non_success": true,
@@ -8,6 +8,10 @@
     "generated_code_execution": false,
     "model_output_is_untrusted": true,
     "model_weight_downloads_by_cli": false,
+    "argos_language_package_downloads_by_cli": false,
+    "cltk_resource_downloads_by_cli": false,
+    "inspect_ai_suite_execution_authorized": false,
+    "persistent_installation_authorized": false,
     "required_evidence": [
       "request_id",
       "git_sha",
@@ -22,32 +26,20 @@
   },
   "routes": {
     "translate": {
-      "steps": ["madlad400-3b-mt"],
-      "required_parameters": ["target_language"]
-    },
-    "code_generation": {
-      "steps": ["qwen3-coder-30b-a3b-instruct"],
-      "required_parameters": []
+      "steps": ["argostranslate"],
+      "required_parameters": ["source_language", "target_language"]
     },
     "classical_language_analysis": {
       "steps": ["cltk"],
       "required_parameters": ["language"]
-    },
-    "specialist_ancient_language_analysis": {
-      "steps": ["heidelberg-ancient-language-models"],
-      "required_parameters": ["language", "artifact_scope"]
     },
     "evaluate_output": {
       "steps": ["inspect-ai"],
       "required_parameters": ["evaluation_suite_id"]
     },
     "translate_and_evaluate": {
-      "steps": ["madlad400-3b-mt", "inspect-ai"],
-      "required_parameters": ["target_language", "evaluation_suite_id"]
-    },
-    "code_and_evaluate": {
-      "steps": ["qwen3-coder-30b-a3b-instruct", "inspect-ai"],
-      "required_parameters": ["evaluation_suite_id"]
+      "steps": ["argostranslate", "inspect-ai"],
+      "required_parameters": ["source_language", "target_language", "evaluation_suite_id"]
     }
   }
 }

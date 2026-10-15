@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "state": "ARCHIVED_HISTORICAL_ALTERNATIVE_RESEARCH_NOT_ACTIVE",
+  "canonical_component_ids_mutated": true,
+  "policy": {
+    "fail_closed": true,
+    "alternative_weight_downloads_authorized": false,
+    "automatic_model_substitution": false,
+    "source_revision_must_be_pinned_before_download": true,
+    "license_review_required": true,
+    "task_quality_eval_required": true,
+    "model_downloads_authorized": false,
+    "runtime_activation_authorized": false
+  },
+  "recommendations": [
+    {
+      "component_id": "argostranslate",
+      "difficulty_rank": 2,
+      "package_version": "1.11.0",
+      "python_wheel_size_bytes_approx": 41600,
+      "language_pair_package_size_average_bytes_approx": 100000000,
+      "mode": "OFFLINE_LOCAL_TRANSLATION",
+      "advantages": [
+        "Small library wheel",
+        "Local inference without a remote translation service",
+        "Only approved language-direction packages need to be acquired"
+      ],
+      "limitations": [
+        "Not weight-free: .argosmodel assets are required",
+        "Coverage is narrower than MADLAD-400",
+        "Direct source/target pair is required; automatic pivoting is disabled"
+      ],
+      "required_adapter": "ArgosTranslateAdapter",
+      "language_pair_matrix": "ai/translation/pairs.json",
+      "status": "ACTIVE_LIBRARY_CANDIDATE_LANGUAGE_PAIRS_NOT_APPROVED"
+    },
+    {
+      "component_id": "inspect-ai",
+      "difficulty_rank": 5,
+      "primary_issue": "Python package dependency closure; no model weights",
+      "recommended_action": "Keep inspect-ai==0.3.280 and create a complete hash-locked package lock",
+      "quantization_applicable": false,
+      "status": "KEEP_CURRENT_COMPONENT"
+    },
+    {
+      "component_id": "madlad400-3b-mt",
+      "difficulty_rank": 2,
+      "original": {
+        "repository": "google/madlad400-3b-mt",
+        "revision": "fa184c675da0b5c9e1c8694fccd4e12e2d422094",
+        "primary_weight_bytes": 11761587872,
+        "primary_weight_sha256": "66ff5f8fcaf92291da486fdfbd4d5233cec90e1359348a56e3172c978b3a76d4"
+      },
+      "preferred_candidate": {
+        "repository": "TigreGotico/madlad400-3b-mt-onnx",
+        "format": "ONNX Runtime INT8",
+        "approximate_total_weight_size_gb": 4.7,
+        "upstream_model": "google/madlad400-3b-mt",
+        "known_validation_caveat": "Public candidate card reports exact-string agreement on 8 of 12 sampled translations; project evaluation is required",
+        "required_adapter": "Optimum ONNX Runtime adapter; not a drop-in Transformers/PyTorch checkpoint",
+        "revision": null,
+        "revision_pin_required_before_download": true
+      },
+      "secondary_candidate": {
+        "repository": "cstr/madlad400-3b-mt-GGUF",
+        "format": "GGUF Q4_K",
+        "approximate_weight_size_gb": 1.8,
+        "required_adapter": "CrispASR/MADLAD-specific adapter; not compatible with existing Transformers wiring without new adapter",
+        "revision": null,
+        "revision_pin_required_before_download": true
+      },
+      "quantization_applicable": true,
+      "status": "DORMANT_FALLBACK_NOT_ACTIVE",
+      "note": "Retained only if Argos coverage fails the approved project language matrix"
+    },
+    {
+      "component_id": "qwen3-coder-30b-a3b-instruct",
+      "difficulty_rank": 1,
+      "original": {
+        "repository": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+        "revision": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
+        "approximate_full_snapshot_gb": 61.1
+      },
+      "preferred_candidate": {
+        "repository": "tensorblock/Qwen_Qwen3-Coder-30B-A3B-Instruct-GGUF",
+        "quantization": "Q4_K_M",
+        "approximate_weight_size_gb": 18.557,
+        "relative_size_reduction_percent_approx": 70,
+        "reported_memory_estimate_gb": 26,
+        "quality_tradeoff": "Same model family; evaluate coding tasks independently",
+        "required_adapter": "llama.cpp-compatible adapter/API; not a drop-in Transformers safetensors model",
+        "revision": null,
+        "revision_pin_required_before_download": true
+      },
+      "smaller_same_domain_fallbacks": [
+        {
+          "repository": "second-state/Qwen2.5-Coder-7B-Instruct-GGUF",
+          "quantization": "Q4_K_M",
+          "approximate_weight_size_gb": 4.683,
+          "tradeoff": "Older, smaller model; capability regression versus 30B-A3B is possible",
+          "revision": null,
+          "revision_pin_required_before_download": true
+        },
+        {
+          "repository": "Kj0rdan/Qwen2.5-Coder-Instruct-GGUF",
+          "quantization": "Q4_K_M",
+          "candidate_variant": "14B",
+          "approximate_weight_size_gb": 8.572,
+          "tradeoff": "Smaller than original; still tight with MADLAD and the full package environment on a standard Actions runner",
+          "revision": null,
+          "revision_pin_required_before_download": true
+        }
+      ],
+      "quantization_applicable": true,
+      "status": "PREFERRED_SAME_FAMILY_QUANT_PENDING_PIN_AND_EVALUATION"
+    },
+    {
+      "component_id": "cltk",
+      "difficulty_rank": 4,
+      "primary_issue": "Package transitive dependencies and optional language corpora/resources",
+      "recommended_action": "Keep cltk==2.5.1; pin full dependency closure and acquire only required language resources",
+      "quantization_applicable": false,
+      "status": "KEEP_CURRENT_COMPONENT"
+    },
+    {
+      "component_id": "heidelberg-ancient-language-models",
+      "difficulty_rank": 3,
+      "primary_issue": "Research repository links multiple separate model checkpoints and treebanks; license and Python-version compatibility",
+      "recommended_action": "Acquire the source at its pinned commit and select only task-specific assets",
+      "quantization_applicable": "OPTIONAL_NOT_FIRST_LINE",
+      "examples": [
+        {
+          "repository": "bowphs/GreBerta",
+          "approximate_safetensors_file_size_mb": 504,
+          "license_declared_on_model_card": "Apache-2.0"
+        },
+        {
+          "repository": "bowphs/PhilBerta",
+          "approximate_safetensors_file_size_mb": 541,
+          "license_declared_on_model_card": "Apache-2.0"
+        },
+        {
+          "repository": "bowphs/GreTa",
+          "parameter_scale": "0.2B",
+          "license_declared_on_model_card": "Apache-2.0"
+        },
+        {
+          "repository": "bowphs/LaTa",
+          "parameter_scale": "0.3B",
+          "license_declared_on_model_card": "Apache-2.0"
+        }
+      ],
+      "status": "TASK_SCOPED_ACQUISITION_AND_PER_ASSET_LICENSE_REVIEW"
+    }
+  ],
+  "aggregate_resource_decision": {
+    "standard_github_hosted_runner_ssd_gib": 14,
+    "preferred_quantized_payload_gb_approx": {
+      "argos_library_wheel_gb_approx": 0.0000416,
+      "argos_language_pair_package_gb_average_approx": 0.1,
+      "qwen3_coder_original_snapshot_gb_approx": 61.1,
+      "note": "Wheel size is not total runtime size: dependencies and approved language packages are separate. Qwen remains the active large model and still needs a larger runner."
+    },
+    "same_family_recommendation": "Use a confirmed larger GitHub-hosted runner with at least 60 GB free disk and around 64 GB RAM for conservative staging and load validation, or select smaller fallbacks and re-evaluate quality. Measure actual disk/RAM before any download.",
+    "smaller_fallback_payload_gb_approx": {
+      "madlad_onnx_int8": 4.7,
+      "qwen2_5_coder_7b_q4_k_m": 4.683,
+      "total_before_packages_cache_and_ancient_assets": 9.383
+    },
+    "note": "Translation changes from one broad-coverage 3B checkpoint to a small library plus approved pair models. This reduces storage for narrow language needs but coverage must be tested. No pair assets downloaded."
+  },
+  "selected_translation_component": "argostranslate"
+}

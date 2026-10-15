@@ -8,6 +8,14 @@ from typing import Protocol
 from .contracts import AdapterReadiness, WorkRequest
 
 
+class AdapterGateError(RuntimeError):
+    """Stable fail-closed runtime gate failure raised by a component adapter."""
+
+    def __init__(self, gate_code: str) -> None:
+        super().__init__(gate_code)
+        self.gate_code = gate_code
+
+
 class ComponentAdapter(Protocol):
     component_id: str
 

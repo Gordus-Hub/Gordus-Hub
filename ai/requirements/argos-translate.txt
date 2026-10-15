@@ -1,0 +1,2 @@
+# Argos library only; individual language-direction .argosmodel assets are governed separately.
+argostranslate==1.11.0

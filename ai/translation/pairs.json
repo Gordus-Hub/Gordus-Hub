@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "state": "PAIR_MATRIX_NOT_APPROVED",
+  "policy": {
+    "fail_closed": true,
+    "model_package_downloads_enabled": false,
+    "source_and_target_language_required": true,
+    "direct_pair_only": true,
+    "automatic_pivot_translation": false,
+    "package_revision_and_file_hash_required": true,
+    "per_package_license_review_required": true
+  },
+  "recommended_pilot_pairs_not_approved": [
+    {
+      "source_language": "es",
+      "target_language": "en"
+    },
+    {
+      "source_language": "en",
+      "target_language": "es"
+    }
+  ],
+  "approved_language_pairs": [],
+  "package_record_schema": {
+    "required_fields": [
+      "source_language",
+      "target_language",
+      "package_version",
+      "download_url",
+      "artifact_sha256",
+      "artifact_size_bytes",
+      "license_status"
+    ],
+    "required_license_status": "VERIFIED"
+  },
+  "note": "The library alone does not perform offline translation until a model package for the requested pair is installed. Approve the required language matrix and verify each .argosmodel artifact before acquisition."
+}

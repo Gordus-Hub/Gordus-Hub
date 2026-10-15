@@ -1,21 +1,25 @@
 id: ai_component_foundation
 namespace: gordus_hub.github
 description: >
-  Governance-bound preflight record for the five AI components. This flow is
-  deliberately non-installing: GitHub Actions performs package and Debian checks;
-  model weights and model inference remain gated.
+  Governance-bound preflight for the three-library runtime foundation.
+  This flow records contract and package-smoke-test boundaries only.
 tasks:
-  - id: declare_installation_boundary
+  - id: declare_three_library_boundary
     type: io.kestra.plugin.core.log.Log
     message: >
-      AI_COMPONENT_FOUNDATION=PREPARED;
-      WIRING_CONTRACT=DEFINED_AND_CI_TESTED;
-      DEFAULT_ADAPTERS=FAIL_CLOSED;
-      PACKAGE_SMOKE_TESTS=GITHUB_ACTIONS;
+      ACTIVE_LIBRARIES=ARGOS_TRANSLATE,CLTK,INSPECT_AI;
+      WIRING=PREPARED_FAIL_CLOSED;
+      CI_PACKAGE_INSTALLS=DISPOSABLE_VENVS_ONLY;
+      PERSISTENT_INSTALLATION=NOT_AUTHORIZED;
+      ARGOS_LANGUAGE_PACKAGES=NOT_DOWNLOADED;
+      CLTK_LANGUAGE_RESOURCES=NOT_DOWNLOADED;
+      INSPECT_AI_SUITES=NOT_APPROVED;
       MODEL_WEIGHTS=NOT_DOWNLOADED;
-      MODEL_INFERENCE=NOT_AUTHORIZED;
       CERTIFICATION=NOT_GRANTED.
   - id: declare_required_gates
     type: io.kestra.plugin.core.log.Log
     message: >
-      Wiring routes are explicit in ai/wiring.json. CI contract tests use test-only fake adapters; no fake adapter is registered for real use. Required gates: immutable model revision, per-artifact license review, resource budget, backend selection, real adapter registration, independent evaluation, and rollback evidence. This control-plane smoke test does not attest those gates as passed.
+      Translation remains blocked until direct Argos pair artifacts are approved and locally installed.
+      CLTK analysis remains blocked until local language resources and file hashes/licenses are approved.
+      Inspect AI evaluation remains blocked until task suites, dataset provenance, scoring contracts
+      and model/network boundaries are reviewed. This flow does not certify task-level operation.

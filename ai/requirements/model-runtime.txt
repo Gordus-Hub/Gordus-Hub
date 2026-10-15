@@ -1,7 +1,0 @@
-# Shared tokenizer/model-library layer for MADLAD and Qwen candidate smoke tests.
-# PyTorch is deliberately excluded: choose and pin CPU/CUDA/accelerator wheels only
-# after the target execution environment and storage/memory envelope are approved.
-# This profile validates Python package compatibility; it does not download model weights.
-transformers==4.57.6
-sentencepiece==0.2.2
-safetensors==0.8.0
