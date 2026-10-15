@@ -139,7 +139,7 @@ jobs:
           set -Eeuo pipefail
           venv="$RUNNER_TEMP/venv-cltk"
           python -m venv "$venv"
-          "$venv/bin/python" -m pip install --no-input -r ai/requirements/cltk.txt
+          "$venv/bin/python" -m pip install --no-input --extra-index-url https://download.pytorch.org/whl/cpu -r ai/requirements/cltk.txt
           "$venv/bin/python" -c 'from cltk import NLP; import stanza; from importlib.metadata import version; print("cltk=" + version("cltk")); print("stanza=" + version("stanza")); assert callable(NLP)'
           "$venv/bin/python" -m pip check
           "$venv/bin/python" -m pip freeze > "$RUNNER_TEMP/gordus-ai-evidence/cltk-pip-freeze.txt"
@@ -207,7 +207,9 @@ jobs:
             resolver="$RUNNER_TEMP/venv-lock-generator"
             python -m venv "$resolver"
             "$resolver/bin/python" -m pip install --no-input --no-cache-dir 'pip-tools==7.6.2'
-            "$resolver/bin/pip-compile" --generate-hashes --resolver=backtracking --strip-extras --allow-unsafe \
+            "$resolver/bin/pip-compile" --index-url https://pypi.org/simple \
+              --extra-index-url https://download.pytorch.org/whl/cpu \
+              --generate-hashes --resolver=backtracking --strip-extras --allow-unsafe \
               --output-file "$lock" ai/requirements/runtime.in
             printf '%s\n' 'LOCK_SOURCE=GENERATED_CI_CANDIDATE_NOT_COMMITTED' 'LOCK_REVIEW_STATUS=NOT_APPROVED_FOR_PERSISTENT_INSTALLATION' > "$evidence/lock-boundary.txt"
           fi
@@ -234,18 +236,21 @@ jobs:
           from argostranslate import package, translate
           from cltk import NLP
           import stanza
+          import torch
           import inspect_ai
           expected = {
               "argostranslate": "1.11.0",
               "cltk": "2.5.1",
               "inspect-ai": "0.3.280",
               "PyYAML": "6.0.2",
+              "torch": "2.14.1+cpu",
           }
           for distribution, wanted in expected.items():
               found = version(distribution)
               assert found == wanted, f"{distribution}: expected {wanted}, found {found}"
           assert callable(NLP)
           assert callable(translate.get_installed_languages)
+          assert torch.version.cuda is None, f"CPU-only runtime expected, got CUDA {torch.version.cuda}"
           print("Combined imports and exact direct pins: PASS")
           PY
           "$venv/bin/inspect" --version
@@ -261,9 +266,9 @@ jobs:
           set -Eeuo pipefail
           lock="$RUNNER_TEMP/gordus-ai-runtime-evidence/runtime-py313-linux-x86_64.txt"
           test -s "$lock"
-          printf '%s\\n' 'GORDUS_RUNTIME_LOCK_BASE64_BEGIN'
+          printf '%s\n' 'GORDUS_RUNTIME_LOCK_BASE64_BEGIN'
           base64 -w 64 "$lock" | sed 's/^/GORDUS_RUNTIME_LOCK_BASE64:/'
-          printf '%s\\n' 'GORDUS_RUNTIME_LOCK_BASE64_END'
+          printf '%s\n' 'GORDUS_RUNTIME_LOCK_BASE64_END'
 
       - name: Upload lock and combined-runtime evidence
         if: always()
