@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -72,7 +73,13 @@ class WiringTests(unittest.TestCase):
             self.assertEqual(result.error_code, "TASK_ROUTE_NOT_REGISTERED")
 
     def test_argos_fails_closed_until_language_pair_approval(self):
-        readiness = ArgosTranslateAdapter().preflight()
+        registry = json.loads((ROOT / "ai" / "translation" / "pairs.json").read_text(encoding="utf-8"))
+        registry["state"] = "PAIR_MATRIX_NOT_APPROVED"
+        registry["approved_language_pairs"] = []
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "pairs.json"
+            path.write_text(json.dumps(registry), encoding="utf-8")
+            readiness = ArgosTranslateAdapter(path).preflight()
         self.assertFalse(readiness.ready)
         self.assertIn("LANGUAGE_PAIR_MATRIX_NOT_APPROVED", readiness.gate_codes)
 

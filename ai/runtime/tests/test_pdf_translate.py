@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import io
 import sys
 import tempfile
@@ -12,9 +13,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ai" / "runtime"))
 
+from gordus_ai import pdf_translate
 from gordus_ai.adapters import AdapterGateError
 from gordus_ai.contracts import AdapterReadiness, WorkRequest
-from gordus_ai import pdf_translate
 
 
 class FakeTranslator:
@@ -52,6 +53,7 @@ class PdfTranslateTests(unittest.TestCase):
         code = self.run_quiet(self.dir / "nope.pdf", self.dir / "out.txt", adaptador=FakeTranslator())
         self.assertEqual(code, 2)
 
+    @unittest.skipUnless(importlib.util.find_spec("pypdf"), "ai/requirements/pdf.txt not installed")
     def test_unreadable_pdf_exits_2(self):
         bad = self.dir / "bad.pdf"
         bad.write_bytes(b"not a pdf at all")
@@ -62,7 +64,8 @@ class PdfTranslateTests(unittest.TestCase):
         original = pdf_translate.extraer_paginas
         pdf_translate.extraer_paginas = lambda ruta: ["Hello."]
         self.addCleanup(setattr, pdf_translate, "extraer_paginas", original)
-        code = self.run_quiet("x.pdf", self.dir / "out.txt", adaptador=FakeTranslator(gate="LANGUAGE_PAIR_NOT_APPROVED"))
+        fake = FakeTranslator(gate="LANGUAGE_PAIR_NOT_APPROVED")
+        code = self.run_quiet("x.pdf", self.dir / "out.txt", adaptador=fake)
         self.assertEqual(code, 3)
 
     def test_success_translates_per_paragraph_and_skips_empty_pages(self):
