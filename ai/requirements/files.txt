@@ -1,0 +1,7 @@
+# File translation for gordus_ai.file_translate (docx, pptx, odt, odp, epub, html).
+# argos-translate-files 1.4.2+ depends on argos-translate-lt instead of argostranslate; 1.4.1 is the
+# last release compatible with argostranslate==1.11.0 (see argos-translate.txt).
+argos-translate-files==1.4.1
+translatehtml==1.5.3
+beautifulsoup4==4.9.3
+lxml==6.1.3
