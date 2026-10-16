@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
     GORDUS_AI_DATA_ROOT=/var/lib/gordus-ai \
-    ARGOS_PACKAGE_DIR=/var/lib/gordus-ai/argos-packages \
+    ARGOS_PACKAGES_DIR=/var/lib/gordus-ai/argos-packages \
     STANZA_RESOURCES_DIR=/var/lib/gordus-ai/stanza_resources
 
 RUN apt-get update \
