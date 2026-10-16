@@ -36,7 +36,9 @@ def read_pinned_requirements(path: Path, root: Path) -> dict[str, str]:
             continue
         match = PIN.fullmatch(line)
         if not match:
-            raise ValueError(f"{path.relative_to(root)}:{number}: dependency must be pinned name[extras]==version: {line!r}")
+            raise ValueError(
+                f"{path.relative_to(root)}:{number}: dependency must be pinned name[extras]==version: {line!r}"
+            )
         name, _extras, version = match.groups()
         key = re.sub(r"[-_.]+", "-", name).lower()
         if key in result:
@@ -45,9 +47,19 @@ def read_pinned_requirements(path: Path, root: Path) -> dict[str, str]:
     return result
 
 
+def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """JSON object hook: duplicate keys are invalid (PUAC2 §09 DATA_CONSTRAINTS)."""
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate JSON key: {key!r}")
+        result[key] = value
+    return result
+
+
 def load_json(path: Path, root: Path, errors: list[str]) -> dict[str, Any]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=reject_duplicate_keys)
     except Exception as exc:
         errors.append(f"unable to read {path.relative_to(root)}: {exc}")
         return {}
@@ -166,10 +178,97 @@ def main() -> int:
         errors.append("Argos pair registry must fail closed")
     if pairs.get("policy", {}).get("model_package_downloads_enabled") is not False:
         errors.append("Argos model-package downloads must remain disabled")
-    if pairs.get("approved_language_pairs") != []:
-        errors.append("Argos language pairs must remain empty pending explicit artifact approval")
-    else:
+    approved_pairs = pairs.get("approved_language_pairs")
+    if approved_pairs == []:
         pending_gates.append({"component": "argostranslate", "gate": "LANGUAGE_PAIR_APPROVAL_AND_ASSET_HASHES_PENDING"})
+    elif not isinstance(approved_pairs, list):
+        errors.append("Argos approved_language_pairs must be a list")
+    else:
+        if pairs.get("state") != "APPROVED_FOR_CONTROLLED_ACQUISITION":
+            errors.append("Argos pairs listed without APPROVED_FOR_CONTROLLED_ACQUISITION state")
+        required = pairs.get("package_record_schema", {}).get("required_fields", [])
+        seen_pairs: set[tuple[Any, Any]] = set()
+        for index, record in enumerate(approved_pairs):
+            if isinstance(record, dict):
+                key = (record.get("source_language"), record.get("target_language"))
+                if key in seen_pairs:
+                    errors.append(f"Argos approved pair #{index} duplicates identifier {key[0]}->{key[1]}")
+                seen_pairs.add(key)
+            if not isinstance(record, dict):
+                errors.append(f"Argos approved pair #{index} must be an object")
+                continue
+            missing = [name for name in required if record.get(name) in (None, "")]
+            if missing:
+                errors.append(f"Argos approved pair #{index} missing fields: {', '.join(missing)}")
+            sha = record.get("artifact_sha256")
+            if not (isinstance(sha, str) and len(sha) == 64 and all(c in "0123456789abcdef" for c in sha)):
+                errors.append(f"Argos approved pair #{index} needs a lowercase hex sha256")
+            size = record.get("artifact_size_bytes")
+            if not isinstance(size, int) or isinstance(size, bool) or size <= 0:
+                errors.append(f"Argos approved pair #{index} needs a positive artifact_size_bytes")
+            if record.get("license_status") != pairs.get("package_record_schema", {}).get("required_license_status"):
+                pending_gates.append({
+                    "component": "argostranslate",
+                    "gate": "PACKAGE_LICENSE_REVIEW_PENDING:"
+                            f"{record.get('source_language')}->{record.get('target_language')}",
+                })
+
+    policy = pairs.get("policy", {})
+    if policy.get("automatic_pivot_translation") is not False or policy.get("direct_pair_only") is not True:
+        errors.append("Argos automatic pivot must stay disabled; two-hop routes are explicit only")
+    two_hop = pairs.get("approved_two_hop_routes", [])
+    if not isinstance(two_hop, list):
+        errors.append("Argos approved_two_hop_routes must be a list")
+        two_hop = []
+    if two_hop and policy.get("explicit_two_hop_routes_allowed_when_registered") is not True:
+        errors.append("Argos two-hop routes listed but explicit_two_hop_routes_allowed_when_registered is not true")
+    direct = {
+        (record.get("source_language"), record.get("target_language"))
+        for record in (approved_pairs if isinstance(approved_pairs, list) else [])
+        if isinstance(record, dict)
+    }
+    for index, route in enumerate(two_hop):
+        if not isinstance(route, dict) or route.get("explicit_two_hop_approved") is not True:
+            errors.append(f"Argos two-hop route #{index} must be an object with explicit_two_hop_approved true")
+            continue
+        source, via, target = (route.get(k) for k in ("source_language", "via_language", "target_language"))
+        if (source, via) not in direct or (via, target) not in direct:
+            errors.append(f"Argos two-hop route #{index} ({source}->{via}->{target}) needs both hops approved")
+        if (source, target) in direct:
+            errors.append(f"Argos two-hop route #{index} duplicates an approved direct pair")
+
+    candidates = pairs.get("candidate_pairs_pending_hash", [])
+    candidate_routes = pairs.get("candidate_two_hop_routes_pending", [])
+    if not isinstance(candidates, list) or not isinstance(candidate_routes, list):
+        errors.append("Argos candidate lists must be lists")
+        candidates, candidate_routes = [], []
+    for index, record in enumerate(candidates):
+        if (
+            not isinstance(record, dict)
+            or record.get("state") != "PENDING_HASH_NOT_APPROVED"
+            or record.get("artifact_sha256") is not None
+            or record.get("license_status") == "VERIFIED"
+        ):
+            errors.append(
+                f"Argos candidate pair #{index} must be PENDING_HASH_NOT_APPROVED with no hash/verified license"
+            )
+        elif (record.get("source_language"), record.get("target_language")) in direct:
+            errors.append(f"Argos candidate pair #{index} duplicates an approved pair")
+    approved_route_keys = {
+        (r.get("source_language"), r.get("via_language"), r.get("target_language"))
+        for r in two_hop if isinstance(r, dict)
+    }
+    for index, route in enumerate(candidate_routes):
+        if not isinstance(route, dict) or route.get("explicit_two_hop_approved") is not False:
+            errors.append(f"Argos candidate route #{index} must have explicit_two_hop_approved false")
+        elif (
+            route.get("source_language"), route.get("via_language"), route.get("target_language")
+        ) in approved_route_keys:
+            errors.append(f"Argos candidate route #{index} duplicates an approved route")
+    if candidates or candidate_routes:
+        pending_gates.append({"component": "argostranslate",
+                              "gate": "ARGOS_CANDIDATES_PENDING_HASH:"
+                                      f"{len(candidates)}_pairs_{len(candidate_routes)}_routes"})
 
     if resources.get("policy", {}).get("fail_closed") is not True:
         errors.append("CLTK resource registry must fail closed")
@@ -203,6 +302,28 @@ def main() -> int:
     docker_path = root / "ai/runtime/Dockerfile"
     if docker_path.is_file() and "HF_HOME" in docker_path.read_text(encoding="utf-8"):
         errors.append("retired Hugging Face model cache remains in runtime Dockerfile")
+
+    evidence_dir = root / "ai/translation/evidence"
+    for evidence_path in sorted(evidence_dir.glob("*.json")) if evidence_dir.is_dir() else []:
+        record = load_json(evidence_path, root, errors)
+        rel = evidence_path.relative_to(root).as_posix()
+        if record.get("schema_version") == 1:
+            pending_gates.append({"component": "argostranslate", "gate": f"LEGACY_UNCHAINED_EVIDENCE:{rel}"})
+        elif record.get("schema_version") == 2:
+            module_path = root / "ai/runtime/gordus_ai/evidence.py"
+            if not module_path.is_file():
+                errors.append(f"{rel}: cannot verify audit chain: ai/runtime/gordus_ai/evidence.py is missing")
+            else:
+                import importlib.util
+
+                spec = importlib.util.spec_from_file_location("gordus_ai_evidence", module_path)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                for problem in module.verify_events(record.get("actions", [])):
+                    errors.append(f"{rel}: audit chain broken: {problem}")
+        elif record:
+            errors.append(f"{rel}: unknown evidence schema_version")
+        evidence_files.append(rel)
 
     hashes: dict[str, str] = {}
     for rel in sorted(set(evidence_files)):
