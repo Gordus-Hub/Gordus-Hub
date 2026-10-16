@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "state": "PAIR_MATRIX_NOT_APPROVED",
+  "state": "APPROVED_FOR_CONTROLLED_ACQUISITION",
   "policy": {
     "fail_closed": true,
     "model_package_downloads_enabled": false,
@@ -8,19 +8,67 @@
     "direct_pair_only": true,
     "automatic_pivot_translation": false,
     "package_revision_and_file_hash_required": true,
-    "per_package_license_review_required": true
+    "per_package_license_review_required": true,
+    "explicit_two_hop_routes_allowed_when_registered": true
   },
   "recommended_pilot_pairs_not_approved": [
     {
       "source_language": "es",
       "target_language": "en"
+    }
+  ],
+  "approved_language_pairs": [
+    {
+      "source_language": "de",
+      "target_language": "en",
+      "package_version": "1.3",
+      "download_url": "https://argos-net.com/v1/translate-de_en-1_3.argosmodel",
+      "artifact_sha256": "becc2b0011f8249fcb89be9ecb75ba0d876b1fab93c28ee6ff0420936897d637",
+      "artifact_size_bytes": 150512831,
+      "license_status": "PENDING_REVIEW",
+      "license_note": "Package and index declare no license; README credits OPUS data/models. Per-package license review pending; do not redistribute."
     },
     {
       "source_language": "en",
-      "target_language": "es"
+      "target_language": "es",
+      "package_version": "1.0",
+      "download_url": "https://argos-net.com/v1/translate-en_es-1_0.argosmodel",
+      "artifact_sha256": "d698d0ef87ad70d5d184b7fa6965905bf4368f09a2bb9ffb165a79bac96af0c4",
+      "artifact_size_bytes": 87503191,
+      "license_status": "PENDING_REVIEW",
+      "license_note": "The .argosmodel README credits OpenSubtitles, ParaCrawl and UNPC (OPUS) training data and Stanza pretrained models, but the package and index declare no license. Per-package license review is still pending; do not redistribute the model."
+    },
+    {
+      "source_language": "fr",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-fr_en-1_9.argosmodel",
+      "artifact_sha256": "3b3052fee6bb1e8e8e632a26a723eb2a2c7710dfe73ba61ffd9b83e85d4f14c1",
+      "artifact_size_bytes": 66585033,
+      "license_status": "PENDING_REVIEW",
+      "license_note": "Package and index declare no license; README credits OPUS data/models. Per-package license review pending; do not redistribute."
+    },
+    {
+      "source_language": "it",
+      "target_language": "en",
+      "package_version": "1.0",
+      "download_url": "https://argos-net.com/v1/translate-it_en-1_0.argosmodel",
+      "artifact_sha256": "d2dd23b8b702f612b8127f07c7a0391f5f2a8b93344e6ddc9dd93c81824e85cb",
+      "artifact_size_bytes": 87190224,
+      "license_status": "PENDING_REVIEW",
+      "license_note": "Hash and size measured by sync_argos_pairs.py --download; the index and package declare no license. Per-package license review pending."
+    },
+    {
+      "source_language": "pt",
+      "target_language": "es",
+      "package_version": "1.0",
+      "download_url": "https://argos-net.com/v1/translate-pt_es-1_0.argosmodel",
+      "artifact_sha256": "72bdf5ef169f4321a810a03fe8639b207c925434d2abc90dfa6adc9a42197180",
+      "artifact_size_bytes": 67509195,
+      "license_status": "PENDING_REVIEW",
+      "license_note": "Package and index declare no license; README credits OPUS data/models. Per-package license review pending; do not redistribute."
     }
   ],
-  "approved_language_pairs": [],
   "package_record_schema": {
     "required_fields": [
       "source_language",
@@ -33,5 +81,796 @@
     ],
     "required_license_status": "VERIFIED"
   },
-  "note": "The library alone does not perform offline translation until a model package for the requested pair is installed. Approve the required language matrix and verify each .argosmodel artifact before acquisition."
+  "note": "The library alone does not perform offline translation until a model package for the requested pair is installed. Approve the required language matrix and verify each .argosmodel artifact before acquisition.",
+  "approved_two_hop_routes": [
+    {
+      "source_language": "de",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": true,
+      "note": "Explicit, per-pair approved two-hop route; each hop is a separately approved direct package. Quality is lower than a direct model."
+    },
+    {
+      "source_language": "fr",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": true,
+      "note": "Explicit, per-pair approved two-hop route; each hop is a separately approved direct package. Quality is lower than a direct model."
+    },
+    {
+      "source_language": "it",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": true,
+      "note": "Explicitly requested via sync_argos_pairs.py --languages; both hops approved."
+    }
+  ],
+  "two_hop_route_schema": {
+    "required_fields": [
+      "source_language",
+      "via_language",
+      "target_language",
+      "explicit_two_hop_approved"
+    ],
+    "rule": "Both hops (source->via and via->target) must exist in approved_language_pairs; explicit_two_hop_approved must be true. automatic_pivot_translation stays false: no route is ever inferred."
+  },
+  "candidate_pairs_pending_hash": [
+    {
+      "source_language": "ar",
+      "target_language": "en",
+      "package_version": "1.0",
+      "download_url": "https://argos-net.com/v1/translate-ar_en-1_0.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "az",
+      "target_language": "en",
+      "package_version": "1.5",
+      "download_url": "https://argos-net.com/v1/translate-az_en-1_5.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "bg",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-bg_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "bn",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-bn_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "ca",
+      "target_language": "en",
+      "package_version": "1.7",
+      "download_url": "https://argos-net.com/v1/translate-ca_en-1_7.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "cs",
+      "target_language": "en",
+      "package_version": "1.9.6",
+      "download_url": "https://argos-net.com/v1/translate-cs_en-1_9_6.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "da",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-da_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "el",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-el_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "eo",
+      "target_language": "en",
+      "package_version": "1.5",
+      "download_url": "https://argos-net.com/v1/translate-eo_en-1_5.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "et",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-et_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "eu",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-eu_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "fa",
+      "target_language": "en",
+      "package_version": "1.5",
+      "download_url": "https://argos-net.com/v1/translate-fa_en-1_5.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "fi",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-fi_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "ga",
+      "target_language": "en",
+      "package_version": "1.1",
+      "download_url": "https://argos-net.com/v1/translate-ga_en-1_1.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "gl",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-gl_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "he",
+      "target_language": "en",
+      "package_version": "1.5",
+      "download_url": "https://argos-net.com/v1/translate-he_en-1_5.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "hi",
+      "target_language": "en",
+      "package_version": "1.1",
+      "download_url": "https://argos-net.com/v1/translate-hi_en-1_1.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "hu",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-hu_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "id",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-id_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "ja",
+      "target_language": "en",
+      "package_version": "1.1",
+      "download_url": "https://argos-net.com/v1/translate-ja_en-1_1.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "ko",
+      "target_language": "en",
+      "package_version": "1.1",
+      "download_url": "https://argos-net.com/v1/translate-ko_en-1_1.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "ky",
+      "target_language": "en",
+      "package_version": "1.4",
+      "download_url": "https://argos-net.com/v1/translate-ky_en-1_4.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "lt",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-lt_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "lv",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-lv_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "ms",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-ms_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "nb",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-nb_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "nl",
+      "target_language": "en",
+      "package_version": "1.8",
+      "download_url": "https://argos-net.com/v1/translate-nl_en-1_8.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "pb",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-pb_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "pl",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-pl_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "ro",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-ro_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "ru",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-ru_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "sk",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-sk_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "sl",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-sl_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "sq",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-sq_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "sv",
+      "target_language": "en",
+      "package_version": "1.5",
+      "download_url": "https://argos-net.com/v1/translate-sv_en-1_5.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "sw",
+      "target_language": "en",
+      "package_version": "1.11",
+      "download_url": "https://argos-net.com/v1/translate-sw_en-1_11.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "th",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-th_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "tl",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-tl_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "tr",
+      "target_language": "en",
+      "package_version": "1.5",
+      "download_url": "https://argos-net.com/v1/translate-tr_en-1_5.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "uk",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-uk_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "ur",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-ur_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "vi",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-vi_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "zh",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-zh_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    },
+    {
+      "source_language": "zt",
+      "target_language": "en",
+      "package_version": "1.9",
+      "download_url": "https://argos-net.com/v1/translate-zt_en-1_9.argosmodel",
+      "artifact_sha256": null,
+      "artifact_size_bytes": null,
+      "license_status": "PENDING_REVIEW",
+      "state": "PENDING_HASH_NOT_APPROVED"
+    }
+  ],
+  "candidate_two_hop_routes_pending": [
+    {
+      "source_language": "ar",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "az",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "bg",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "bn",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "ca",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "cs",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "da",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "el",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "eo",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "et",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "eu",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "fa",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "fi",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "ga",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "gl",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "he",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "hi",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "hu",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "id",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "ja",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "ko",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "ky",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "lt",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "lv",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "ms",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "nb",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "nl",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "pb",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "pl",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "ro",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "ru",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "sk",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "sl",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "sq",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "sv",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "sw",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "th",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "tl",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "tr",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "uk",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "ur",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "vi",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "zh",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    },
+    {
+      "source_language": "zt",
+      "via_language": "en",
+      "target_language": "es",
+      "explicit_two_hop_approved": false,
+      "state": "PENDING_HOP_APPROVAL_NOT_APPROVED"
+    }
+  ],
+  "argos_index_sync": {
+    "index_source_url": "https://raw.githubusercontent.com/argosopentech/argospm-index/main/index.json",
+    "index_sha256": "a65ae909a97ddc89a01cbf0596932dc6415df9815a11d85fe8240b367926b7b0",
+    "target_language": "es",
+    "via_language": "en",
+    "candidate_rule": "Candidates are NOT approved: no artifact hash yet. Approve with --download --languages."
+  }
 }
