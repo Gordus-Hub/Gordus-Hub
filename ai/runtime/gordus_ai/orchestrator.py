@@ -5,15 +5,15 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Mapping
 
 from .adapters import AdapterGateError, ComponentAdapter, UnavailableAdapter
 from .contracts import (
+    MAX_OUTPUT_CHARS,
     AdapterReadiness,
     PipelineResult,
     StepEvidence,
     WorkRequest,
-    MAX_OUTPUT_CHARS,
     sha256_text,
     utc_now,
 )

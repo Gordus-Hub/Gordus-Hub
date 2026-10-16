@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
-
 KNOWN_TASKS = frozenset({
     "translate",
     "classical_language_analysis",

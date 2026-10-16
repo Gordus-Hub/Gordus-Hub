@@ -7,8 +7,8 @@ import json
 import sys
 from pathlib import Path
 
-from .argos_adapter import ArgosTranslateAdapter
 from .adapters import UnavailableAdapter
+from .argos_adapter import ArgosTranslateAdapter
 from .contracts import WorkRequest
 from .orchestrator import GordusOrchestrator
 

@@ -1,8 +1,16 @@
-"""Governed Argos Translate adapter. No language package is downloaded at runtime."""
+"""Governed Argos Translate adapter. No language package is downloaded at runtime.
+
+Direct pairs come from ``approved_language_pairs``. A two-hop route (source -> via -> target)
+is used only when it is listed explicitly in ``approved_two_hop_routes`` and both hops are
+themselves approved direct pairs; routes are never inferred automatically. An approved pair
+must carry its artifact SHA-256; ``candidate_*`` lists written by scripts/ai/sync_argos_pairs.py
+are never read here, so candidates stay not approved.
+"""
 
 from __future__ import annotations
 
 import json
+from itertools import pairwise
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -79,18 +87,58 @@ class ArgosTranslateAdapter:
         except AdapterGateError as exc:
             return AdapterReadiness(False, (exc.gate_code,))
 
-    def invoke(self, request: WorkRequest, input_text: str) -> str:
+    @staticmethod
+    def _is_direct_approved(registry: Mapping[str, Any], source: str, target: str) -> bool:
+        return any(
+            isinstance(pair, dict)
+            and pair.get("source_language") == source
+            and pair.get("target_language") == target
+            and isinstance(pair.get("artifact_sha256"), str)
+            and len(pair["artifact_sha256"]) == 64
+            for pair in registry["approved_language_pairs"]
+        )
+
+    def resolve_route(self, source_code: str, target_code: str) -> tuple[str, ...]:
+        """Return the approved language chain, e.g. ("pt", "es") or ("fr", "en", "es")."""
         registry = self._load_registry()
+        if self._is_direct_approved(registry, source_code, target_code):
+            return (source_code, target_code)
+        if registry.get("policy", {}).get("explicit_two_hop_routes_allowed_when_registered") is True:
+            routes = registry.get("approved_two_hop_routes", [])
+            for route in routes if isinstance(routes, list) else []:
+                if (
+                    isinstance(route, dict)
+                    and route.get("explicit_two_hop_approved") is True
+                    and route.get("source_language") == source_code
+                    and route.get("target_language") == target_code
+                    and isinstance(route.get("via_language"), str)
+                ):
+                    via = route["via_language"]
+                    if self._is_direct_approved(registry, source_code, via) and self._is_direct_approved(
+                        registry, via, target_code
+                    ):
+                        return (source_code, via, target_code)
+                    raise AdapterGateError("TWO_HOP_ROUTE_HOP_NOT_APPROVED")
+        raise AdapterGateError("LANGUAGE_PAIR_NOT_APPROVED")
+
+    def pair_readiness(self, source_code: str, target_code: str) -> AdapterReadiness:
+        """Preflight for one specific request: approved route and every hop installed."""
+        try:
+            chain = self.resolve_route(source_code, target_code)
+            for hop_source, hop_target in pairwise(chain):
+                self._translation_object(hop_source, hop_target)
+            return AdapterReadiness(True, ())
+        except AdapterGateError as exc:
+            return AdapterReadiness(False, (exc.gate_code,))
+
+    def invoke(self, request: WorkRequest, input_text: str) -> str:
         source_code = request.parameters.get("source_language")
         target_code = request.parameters.get("target_language")
         if not isinstance(source_code, str) or not isinstance(target_code, str):
+            self._load_registry()
             raise AdapterGateError("SOURCE_AND_TARGET_LANGUAGE_REQUIRED")
-        approved = registry["approved_language_pairs"]
-        if not any(
-            isinstance(pair, dict)
-            and pair.get("source_language") == source_code
-            and pair.get("target_language") == target_code
-            for pair in approved
-        ):
-            raise AdapterGateError("LANGUAGE_PAIR_NOT_APPROVED")
-        return self._translation_object(source_code, target_code).translate(input_text)
+        chain = self.resolve_route(source_code, target_code)
+        text = input_text
+        for hop_source, hop_target in pairwise(chain):
+            text = self._translation_object(hop_source, hop_target).translate(text)
+        return text
