@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "project": "Gordus-Hub/Gordus-Hub",
+  "toolchain": "java",
+  "state": "JAVA_TOOLCHAIN_CANDIDATE_NOT_RUNTIME_CERTIFIED",
+  "policy": {
+    "isolation": "separate-image-and-workflow",
+    "isolated_from": ["ai/", "scripts/ai/", ".devcontainer/"],
+    "fail_closed": true,
+    "checksum_required": true,
+    "mutable_versions_allowed": false,
+    "system_package_manager_jdk_allowed": false,
+    "persistent_installation_authorized": false,
+    "certification": "NOT_GRANTED"
+  },
+  "dockerfile": "toolchains/java/Dockerfile",
+  "components": [
+    {
+      "id": "temurin-jdk-25",
+      "kind": "jdk",
+      "vendor": "Eclipse Adoptium",
+      "distribution": "eclipse-temurin",
+      "jvm": "hotspot",
+      "feature_version": 25,
+      "version": "25.0.4.1+1",
+      "java_version": "25.0.4.1",
+      "release_tag": "jdk-25.0.4.1+1",
+      "release_date": "2026-08-18",
+      "lts": true,
+      "source": "https://github.com/adoptium/temurin25-binaries",
+      "install_path": "/opt/java/jdk-25",
+      "java_home": "/opt/java/jdk-25",
+      "artifacts": [
+        {
+          "arch": "amd64",
+          "file": "OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz",
+          "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk_x64_linux_hotspot_25.0.4.1_1.tar.gz",
+          "sha256": "dbb698396d478e7fa2b1e50f4103324b2a99b90569ee27c33f2261f9215cf41e",
+          "size_bytes": 141329719
+        },
+        {
+          "arch": "arm64",
+          "file": "OpenJDK25U-jdk_aarch64_linux_hotspot_25.0.4.1_1.tar.gz",
+          "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.4.1%2B1/OpenJDK25U-jdk_aarch64_linux_hotspot_25.0.4.1_1.tar.gz",
+          "sha256": "69df11a02cfa3ef7d7ca645e03edce6778ec090e100f6ae2b42097865730ac52",
+          "size_bytes": 140137820
+        }
+      ],
+      "license": {
+        "value": "GPL-2.0-only WITH Classpath-exception-2.0",
+        "status": "DECLARED"
+      },
+      "tools": {
+        "compiler": ["javac"],
+        "runtime": ["java"],
+        "development": ["jar", "javadoc", "jshell", "jlink", "jdeps", "jpackage", "javap", "jdb", "jcmd", "jfr", "jmod", "keytool", "jarsigner"]
+      },
+      "installation_enabled": true,
+      "smoke_test": "toolchains/java/tests/test_java_toolchain.sh",
+      "scope": "Java 25 compile/run/package toolchain only; does not replace the JDK 21 used by the Android devcontainer"
+    }
+  ]
+}
