@@ -1,0 +1,43 @@
+id: java_toolchain_smoke
+namespace: gordus_hub.toolchains
+description: >
+  Fail-closed gate for the isolated Java 25 toolchain (toolchains/java/).
+  The Kestra slim image ships only core plugins and no javac, so the javac/java
+  smoke test runs inside the gordus-java25 Debian 13 image; this flow receives the
+  observed results as inputs and FAILS unless they prove JDK 25 compiled and ran
+  Hola.java. It is kept apart from the Python/AI flows in kestra/flows/.
+inputs:
+  - id: java_version_line
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: javac_version_line
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: hola_output
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: smoke_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+tasks:
+  - id: declare_java_boundary
+    type: io.kestra.plugin.core.log.Log
+    message: >
+      TOOLCHAIN=JAVA;
+      JDK=ECLIPSE_TEMURIN_25.0.4.1+1;
+      JAVA_HOME=/opt/java/jdk-25;
+      IMAGE_BASE=DEBIAN_13_SLIM;
+      CHECKSUM=SHA256_PINNED_AMD64_ARM64;
+      ISOLATED_FROM=AI_PYTHON,SCRIPTS_AI,DEVCONTAINER_JDK21;
+      CERTIFICATION=NOT_GRANTED.
+  - id: gate_java_25_smoke
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ (inputs.java_version_line contains 'version \"25') and (inputs.javac_version_line contains 'javac 25') and (inputs.hola_output contains 'Hola, Gordus-Hub!') and (inputs.smoke_result == 'PASS') }}"
+    then:
+      - id: record_pass
+        type: io.kestra.plugin.core.log.Log
+        message: "JAVA_TOOLCHAIN_SMOKE=PASS; java='{{ inputs.java_version_line }}'; javac='{{ inputs.javac_version_line }}'; output='{{ inputs.hola_output }}'"
+    else:
+      - id: fail_closed
+        type: io.kestra.plugin.core.execution.Fail
+        errorMessage: "JAVA_TOOLCHAIN_SMOKE=BLOCKED: results missing or not JDK 25 (java='{{ inputs.java_version_line }}', smoke='{{ inputs.smoke_result }}')"
