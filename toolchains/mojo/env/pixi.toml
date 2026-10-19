@@ -1,0 +1,10 @@
+[workspace]
+name = "gordus-mojo"
+version = "0.1.0"
+description = "Entorno Mojo aislado de Gordus-Hub (toolchains/mojo). Lock obligatorio: pixi install --locked."
+channels = ["https://conda.modular.com/max/", "conda-forge"]
+platforms = ["linux-64", "linux-aarch64"]
+
+[dependencies]
+mojo = "==1.1.0"
+python = "3.13.*"
