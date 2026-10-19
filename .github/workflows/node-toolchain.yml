@@ -1,0 +1,143 @@
+name: Node.js and TypeScript toolchain validation
+
+on:
+  pull_request:
+    paths:
+      - "toolchains/node/**"
+      - ".github/workflows/node-toolchain.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "toolchains/node/**"
+      - ".github/workflows/node-toolchain.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: node-toolchain-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pins-preflight:
+    name: Validate Node pins, signatures, npm policy and isolation (fail-closed)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13 (stdlib only, for the validator)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Validate components.json against Dockerfile pins
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "$RUNNER_TEMP/node-evidence"
+          python toolchains/node/scripts/validate_node_toolchain.py --repo-root . --report "$RUNNER_TEMP/node-evidence/node-preflight.json"
+          python -c 'import json, os; p=json.load(open(os.environ["RUNNER_TEMP"] + "/node-evidence/node-preflight.json")); assert p["result"] == "PASS", p; assert p["certification"] == "NOT_GRANTED"'
+          sh -n toolchains/node/tests/test_node_toolchain.sh
+
+  image-smoke-and-kestra:
+    name: Build Debian 13 Node image, npm ci/tsc/node --test, gate in Kestra
+    needs: pins-preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build isolated Node.js toolchain image (SHA-256 + GPG verified inside)
+        run: docker build --pull --file toolchains/node/Dockerfile --tag gordus-node:ci .
+
+      - name: Run node, npm ci --offline, tsc, tsc --noEmit and node --test inside the image (offline)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "$RUNNER_TEMP/node-evidence"
+          docker run --rm --network none gordus-node:ci sh /opt/gordus-node/tests/test_node_toolchain.sh | tee "$RUNNER_TEMP/node-evidence/smoke.txt"
+          docker run --rm gordus-node:ci sh -c 'test "$(id -un)" = nodeuser && test "$(npm config get offline)" = true && ! command -v python3 && ! command -v curl && ! touch /opt/gordus-node/probe 2>/dev/null && ! touch /opt/node/probe 2>/dev/null'
+          docker image inspect gordus-node:ci --format '{{.Size}}' > "$RUNNER_TEMP/node-evidence/image-size-bytes.txt"
+          smoke="$RUNNER_TEMP/node-evidence/smoke.txt"
+          {
+            printf 'NODE_VERSION_LINE=%s\n' "$(grep -m1 '^node v' "$smoke")"
+            printf 'NPM_VERSION_LINE=%s\n' "$(grep -m1 '^npm [0-9]' "$smoke")"
+            printf 'TSC_VERSION_LINE=%s\n' "$(grep -m1 '^tsc: ' "$smoke")"
+            printf 'HOLA_OUTPUT=%s\n' "$(grep -m1 '^Hola, ' "$smoke")"
+            if grep -q '^node --test OK' "$smoke"; then echo 'TEST_RESULT=PASS'; else echo 'TEST_RESULT=FAIL'; fi
+            if grep -q '^PASS: toolchain Node ' "$smoke"; then echo 'SMOKE_RESULT=PASS'; else echo 'SMOKE_RESULT=FAIL'; fi
+          } >> "$GITHUB_ENV"
+
+      - name: Generate a one-run Kestra test credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          password="KCI$(openssl rand -hex 24)A9!"
+          echo "::add-mask::$password"
+          printf 'KESTRA_TEST_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
+
+      - name: Start ephemeral pinned Kestra engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull kestra/kestra:v1.3.40-slim
+          configuration="$(printf 'kestra:\n  server:\n    basicAuth:\n      username: "admin@kestra.io"\n      password: "%s"\n' "$KESTRA_TEST_PASSWORD")"
+          docker run -d --name kestra-node-smoke -p 127.0.0.1:8080:8080 \
+            -e KESTRA_CONFIGURATION="$configuration" \
+            kestra/kestra:v1.3.40-slim server local
+          for attempt in $(seq 1 36); do
+            if ! docker inspect -f '{{.State.Running}}' kestra-node-smoke 2>/dev/null | grep -qx true; then
+              docker logs kestra-node-smoke || true; exit 1
+            fi
+            if curl --location --fail --silent http://127.0.0.1:8080/ >/dev/null; then echo "Kestra API is ready."; exit 0; fi
+            sleep 5
+          done
+          echo "Kestra API did not become ready."; docker logs kestra-node-smoke || true; exit 1
+
+      - name: Import Node toolchain flow and require SUCCESS with observed results
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth="admin@kestra.io:$KESTRA_TEST_PASSWORD"
+          curl --fail --silent --show-error --user "$auth" -X POST -H "Content-Type: application/x-yaml" \
+            --data-binary @toolchains/node/kestra/node_toolchain_smoke.yaml \
+            http://127.0.0.1:8080/api/v1/main/flows -o /tmp/kestra-node-import.json
+          jq -e '.id == "node_toolchain_smoke" and .namespace == "gordus_hub.toolchains"' /tmp/kestra-node-import.json
+          response="$(curl --fail --silent --show-error --user "$auth" -X POST \
+            -F "node_version=$NODE_VERSION_LINE" -F "npm_version=$NPM_VERSION_LINE" \
+            -F "tsc_version=$TSC_VERSION_LINE" -F "hola_output=$HOLA_OUTPUT" -F "test_result=$TEST_RESULT" \
+            -F "smoke_result=$SMOKE_RESULT" \
+            http://127.0.0.1:8080/api/v1/main/executions/gordus_hub.toolchains/node_toolchain_smoke)"
+          execution_id="$(printf '%s' "$response" | jq -r '.id // empty')"
+          test -n "$execution_id"
+          for attempt in $(seq 1 60); do
+            status_json="$(curl --fail --silent --show-error --user "$auth" "http://127.0.0.1:8080/api/v1/main/executions/$execution_id")"
+            state="$(printf '%s' "$status_json" | jq -r '.state.current // empty')"
+            echo "Node toolchain execution $execution_id state: $state"
+            case "$state" in
+              SUCCESS) exit 0 ;;
+              FAILED|WARNING|KILLING|KILLED|CANCELLED) echo "$status_json"; exit 1 ;;
+            esac
+            sleep 5
+          done
+          echo "Timed out waiting for Node toolchain flow execution $execution_id."; exit 1
+
+      - name: Upload Node toolchain evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-toolchain-evidence
+          path: ${{ runner.temp }}/node-evidence
+          if-no-files-found: warn
+
+      - name: Print Kestra logs on failure
+        if: failure()
+        run: docker logs kestra-node-smoke || true
+
+      - name: Stop ephemeral Kestra engine
+        if: always()
+        run: docker rm -f kestra-node-smoke || true
