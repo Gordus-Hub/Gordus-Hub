@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "project": "Gordus-Hub/Gordus-Hub",
+  "toolchain": "mojo",
+  "state": "MOJO_TOOLCHAIN_CANDIDATE_NOT_RUNTIME_CERTIFIED",
+  "policy": {
+    "isolation": "separate-image-and-workflow",
+    "isolated_from": [
+      "ai/",
+      "scripts/ai/",
+      "toolchains/java/",
+      ".devcontainer/",
+      "kestra/flows/"
+    ],
+    "fail_closed": true,
+    "checksum_required": true,
+    "lockfile_required": true,
+    "mutable_versions_allowed": false,
+    "system_python_allowed": false,
+    "telemetry_first_activation_suppressed": true,
+    "persistent_installation_authorized": false,
+    "certification": "NOT_GRANTED"
+  },
+  "dockerfile": "toolchains/mojo/Dockerfile",
+  "components": [
+    {
+      "id": "pixi",
+      "kind": "package-and-environment-manager",
+      "vendor": "prefix.dev",
+      "version": "0.82.0",
+      "source": "https://github.com/prefix-dev/pixi",
+      "release_tag": "v0.82.0",
+      "install_path": "/usr/local/bin/pixi",
+      "artifacts": [
+        {
+          "arch": "amd64",
+          "file": "pixi-x86_64-unknown-linux-musl.tar.gz",
+          "url": "https://github.com/prefix-dev/pixi/releases/download/v0.82.0/pixi-x86_64-unknown-linux-musl.tar.gz",
+          "sha256": "d305406a7630aab6484419833f9204b2fe9ea40632da8bb536496f123ca86e7f",
+          "size_bytes": 30376906
+        },
+        {
+          "arch": "arm64",
+          "file": "pixi-aarch64-unknown-linux-musl.tar.gz",
+          "url": "https://github.com/prefix-dev/pixi/releases/download/v0.82.0/pixi-aarch64-unknown-linux-musl.tar.gz",
+          "sha256": "b18dadba196c0c77781533184ec3e7757422c0ae9bed0047ff7ca1c688c0f62b",
+          "size_bytes": 33377992
+        }
+      ],
+      "license": {
+        "value": "BSD-3-Clause",
+        "status": "DECLARED"
+      },
+      "tools": {
+        "package_manager": [
+          "pixi"
+        ]
+      },
+      "installation_enabled": true
+    },
+    {
+      "id": "mojo-sdk",
+      "kind": "language-sdk",
+      "vendor": "Modular Inc",
+      "version": "1.1.0",
+      "build": "8189361e",
+      "release_date": "2026-09-17",
+      "source": "https://conda.modular.com/max/",
+      "docs": "https://mojolang.org/docs/manual/install",
+      "install_method": "pixi install --locked (toolchains/mojo/env/pixi.toml + pixi.lock)",
+      "manifest": "toolchains/mojo/env/pixi.toml",
+      "lockfile": "toolchains/mojo/env/pixi.lock",
+      "platforms": [
+        "linux-64",
+        "linux-aarch64"
+      ],
+      "install_path": "/opt/mojo/env/.pixi/envs/default",
+      "conda_channels": [
+        "https://conda.modular.com/max/",
+        "conda-forge"
+      ],
+      "lock_package_count": 79,
+      "modular_artifacts": [
+        {
+          "package": "mojo-1.1.0-release.conda",
+          "subdir": "linux-64",
+          "url": "https://conda.modular.com/max/linux-64/mojo-1.1.0-release.conda",
+          "sha256": "06af8313018ba5defb63bdb3bf479df73925450100e4744a5c8d39a2869d9369",
+          "size_bytes": 117682275
+        },
+        {
+          "package": "mojo-compiler-1.1.0-release.conda",
+          "subdir": "linux-64",
+          "url": "https://conda.modular.com/max/linux-64/mojo-compiler-1.1.0-release.conda",
+          "sha256": "1ff52b39a0d2a1bedb8c4705aadc460205ca62fc19f63426bc545e4b60a31aa0",
+          "size_bytes": 69781261
+        },
+        {
+          "package": "mojo-1.1.0-release.conda",
+          "subdir": "linux-aarch64",
+          "url": "https://conda.modular.com/max/linux-aarch64/mojo-1.1.0-release.conda",
+          "sha256": "9a9b46c8ec0068928fe35b2fd5cb4dca30bac7092f70e06c41273bdbc2d83d79",
+          "size_bytes": 114828378
+        },
+        {
+          "package": "mojo-compiler-1.1.0-release.conda",
+          "subdir": "linux-aarch64",
+          "url": "https://conda.modular.com/max/linux-aarch64/mojo-compiler-1.1.0-release.conda",
+          "sha256": "6d764a80411401b0e04ef4c8e779d7b09564cb0011d382986aefe189378451d1",
+          "size_bytes": 67816551
+        },
+        {
+          "package": "mblack-26.6.0-release.conda",
+          "subdir": "noarch",
+          "url": "https://conda.modular.com/max/noarch/mblack-26.6.0-release.conda",
+          "sha256": "b1ee3bbc2a5cf72930ef88b57769422d35f8a91d6f31ed3e4036e5c082835057",
+          "size_bytes": 138160
+        },
+        {
+          "package": "mojo-python-1.1.0-release.conda",
+          "subdir": "noarch",
+          "url": "https://conda.modular.com/max/noarch/mojo-python-1.1.0-release.conda",
+          "sha256": "a00d79bd9f8124706d50994d42e0072dfb7c531171370b27ca0ebb647af87137",
+          "size_bytes": 24150
+        }
+      ],
+      "bundled_python": {
+        "package": "python",
+        "version_spec": "3.13.*",
+        "resolved": "3.13.16",
+        "path": "/opt/mojo/env/.pixi/envs/default/bin/python3",
+        "scope": "only inside the Mojo env; never the system or gordus_ai Python"
+      },
+      "license": {
+        "value": "LicenseRef-Modular-MAX-Community-License",
+        "conda_metadata": "LicenseRef-Modular-Proprietary",
+        "terms": "Modular MAX Community License, Last Modified 2026-08-18 (https://www.modular.com/legal/community); shipped as info/licenses/LICENSE in mojo and mojo-compiler 1.1.0",
+        "open_source_parts": "Mojo language/stdlib source in github.com/modular/modular is Apache-2.0 WITH LLVM-exception (license section 1.4)",
+        "notes": [
+          "section 2.1: use may be subject to telemetry/usage-data collection",
+          "section 3.3: 'Powered by Modular' marks only for entities commercially offering MAX as a hosted/managed AI service",
+          "redistributing SDK components requires the license text and attribution; this repo only references the SDK, it does not bundle it"
+        ],
+        "status": "DECLARED_REVIEWED_2026-10-18"
+      },
+      "tools": {
+        "compiler": [
+          "mojo build"
+        ],
+        "runner": [
+          "mojo run"
+        ],
+        "cli": [
+          "mojo"
+        ],
+        "development": [
+          "mojo repl",
+          "mojo format",
+          "mojo doc",
+          "mojo package",
+          "mojo precompile",
+          "mojo debug",
+          "mojo-lsp-server",
+          "mojo-lldb",
+          "mojo-lldb-dap",
+          "mblack"
+        ],
+        "linker_from_debian": [
+          "gcc"
+        ]
+      },
+      "installation_enabled": true,
+      "smoke_test": "toolchains/mojo/tests/test_mojo_toolchain.sh",
+      "scope": "Mojo compile/run toolchain only (CPU); MAX GPU/model serving not included; native Windows not supported (use this Docker image or WSL)",
+      "manifest_sha256": "ad8abb4452bc5a74f0c9be3f8bd8df940ebbf1a4def9e3b6d3665cbf9ebf706e",
+      "lockfile_sha256": "5c0d76668bfae9c6c2761ec2a87b3f4369254c06714b4bda260d2371524a2a85"
+    }
+  ]
+}
