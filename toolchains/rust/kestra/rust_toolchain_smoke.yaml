@@ -1,0 +1,51 @@
+id: rust_toolchain_smoke
+namespace: gordus_hub.toolchains
+description: >
+  Fail-closed gate for the isolated Rust toolchain (toolchains/rust/).
+  The Kestra slim image ships only core plugins and no Rust toolchain, so cargo build /
+  run / test / fmt / clippy run inside the gordus-rust Debian 13 image; this flow receives
+  the observed results as inputs and FAILS unless they prove Rust 1.99.1 offline.
+  Kept apart from kestra/flows/ and the other toolchain flows.
+inputs:
+  - id: rustc_version_line
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: cargo_version_line
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: hola_output
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: test_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: smoke_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+tasks:
+  - id: declare_rust_boundary
+    type: io.kestra.plugin.core.log.Log
+    message: >
+      TOOLCHAIN=RUST;
+      RUST=1.99.1_STATIC_RUST_LANG_ORG_SHA256_AND_GPG_PINNED_AMD64_ARM64;
+      COMPONENTS=RUSTC,RUST-STD,CARGO,RUSTFMT,CLIPPY;
+      RUSTUP=NOT_USED;
+      INSTALL=/OPT/RUST;
+      CARGO_HOME=/VAR/LIB/GORDUS-RUST/CARGO;
+      CARGO_NET_OFFLINE=TRUE;
+      LINKER=GCC_14_DEBIAN;
+      IMAGE_BASE=DEBIAN_13_SLIM;
+      ISOLATED_FROM=AI_PYTHON,SCRIPTS_AI,JAVA_TOOLCHAIN,MOJO_TOOLCHAIN,GO_TOOLCHAIN,CPP_TOOLCHAIN,DEVCONTAINER;
+      LICENSE=MIT_OR_APACHE-2.0;
+      CERTIFICATION=NOT_GRANTED.
+  - id: gate_rust_smoke
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ (inputs.rustc_version_line contains 'rustc 1.99.1 (') and (inputs.cargo_version_line contains 'cargo 1.99.1 (') and (inputs.hola_output contains 'Hola, Gordus-Hub!') and (inputs.test_result == 'PASS') and (inputs.smoke_result == 'PASS') }}"
+    then:
+      - id: record_pass
+        type: io.kestra.plugin.core.log.Log
+        message: "RUST_TOOLCHAIN_SMOKE=PASS; rustc='{{ inputs.rustc_version_line }}'; cargo='{{ inputs.cargo_version_line }}'; output='{{ inputs.hola_output }}'"
+    else:
+      - id: fail_closed
+        type: io.kestra.plugin.core.execution.Fail
+        errorMessage: "RUST_TOOLCHAIN_SMOKE=BLOCKED: results missing or not Rust 1.99.1 (rustc='{{ inputs.rustc_version_line }}', cargo='{{ inputs.cargo_version_line }}', smoke='{{ inputs.smoke_result }}')"
