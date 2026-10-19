@@ -1,0 +1,50 @@
+id: mojo_toolchain_smoke
+namespace: gordus_hub.toolchains
+description: >
+  Fail-closed gate for the isolated Mojo toolchain (toolchains/mojo/).
+  The Kestra slim image ships only core plugins and no Mojo SDK, so mojo run /
+  mojo build run inside the gordus-mojo Debian 13 image; this flow receives the
+  observed results as inputs and FAILS unless they prove Mojo 1.1.0 ran, built a
+  binary and used the Python inside the Mojo env. Kept apart from the Python/AI
+  flows in kestra/flows/ and from the Java toolchain flow.
+inputs:
+  - id: mojo_version_line
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: hola_output
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: binary_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: interop_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: smoke_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+tasks:
+  - id: declare_mojo_boundary
+    type: io.kestra.plugin.core.log.Log
+    message: >
+      TOOLCHAIN=MOJO;
+      MOJO=1.1.0;
+      PIXI=0.82.0_SHA256_PINNED;
+      INSTALL=PIXI_INSTALL_LOCKED;
+      MOJO_ENV=/opt/mojo/env/.pixi/envs/default;
+      IMAGE_BASE=DEBIAN_13_SLIM;
+      SYSTEM_PYTHON=NONE;
+      ISOLATED_FROM=AI_PYTHON,SCRIPTS_AI,JAVA_TOOLCHAIN,DEVCONTAINER;
+      LICENSE=MODULAR_MAX_COMMUNITY_LICENSE;
+      CERTIFICATION=NOT_GRANTED.
+  - id: gate_mojo_smoke
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ (inputs.mojo_version_line contains 'Mojo 1.1.0 (') and (inputs.hola_output contains 'Hola, Gordus-Hub!') and (inputs.binary_result == 'PASS') and (inputs.interop_result contains 'python_prefix: /opt/mojo/env/.pixi/envs/default') and (inputs.smoke_result == 'PASS') }}"
+    then:
+      - id: record_pass
+        type: io.kestra.plugin.core.log.Log
+        message: "MOJO_TOOLCHAIN_SMOKE=PASS; mojo='{{ inputs.mojo_version_line }}'; output='{{ inputs.hola_output }}'; interop='{{ inputs.interop_result }}'"
+    else:
+      - id: fail_closed
+        type: io.kestra.plugin.core.execution.Fail
+        errorMessage: "MOJO_TOOLCHAIN_SMOKE=BLOCKED: results missing or not Mojo 1.1.0 (mojo='{{ inputs.mojo_version_line }}', smoke='{{ inputs.smoke_result }}')"
