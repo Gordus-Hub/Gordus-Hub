@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "project": "Gordus-Hub/Gordus-Hub",
+  "toolchain": "node",
+  "state": "NODE_TOOLCHAIN_CANDIDATE_NOT_RUNTIME_CERTIFIED",
+  "policy": {
+    "isolation": "separate-image-and-workflow",
+    "isolated_from": [
+      "ai/",
+      "scripts/ai/",
+      "toolchains/java/",
+      "toolchains/mojo/",
+      "toolchains/go/",
+      "toolchains/cpp/",
+      "toolchains/rust/",
+      ".devcontainer/",
+      "kestra/flows/"
+    ],
+    "fail_closed": true,
+    "checksum_required": true,
+    "signature_required": true,
+    "mutable_versions_allowed": false,
+    "package_lock_required": true,
+    "install_scripts_allowed": false,
+    "package_downloads_by_default": false,
+    "update_notifier": "off",
+    "telemetry": "none (Node.js and npm have no telemetry; update-notifier, fund and audit disabled)",
+    "system_python_allowed": false,
+    "network_tools_allowed": false,
+    "persistent_installation_authorized": false,
+    "certification": "NOT_GRANTED"
+  },
+  "dockerfile": "toolchains/node/Dockerfile",
+  "base_image": "debian:13-slim",
+  "components": [
+    {
+      "id": "node",
+      "kind": "runtime",
+      "vendor": "OpenJS Foundation",
+      "distribution": "nodejs.org/dist official binary",
+      "version": "24.22.0",
+      "lts": "Krypton",
+      "release_date": "2026-10-14",
+      "source": "https://nodejs.org/dist/v24.22.0/",
+      "checksum_source": "https://nodejs.org/dist/v24.22.0/SHASUMS256.txt",
+      "signature": {
+        "file": "https://nodejs.org/dist/v24.22.0/SHASUMS256.txt.sig",
+        "key_repo": "https://github.com/nodejs/release-keys",
+        "key_repo_commit": "481637f813e912c4aa3622d7964ab426c97b8e8d",
+        "fingerprint": "C82FA3AE1CBEDC6BE46B9360C43CEC45C17AB93C",
+        "signer": "Richard Lau <richard.lau@ibm.com>",
+        "verified_with": "gpgv"
+      },
+      "install_path": "/opt/node",
+      "artifacts": [
+        {
+          "arch": "amd64",
+          "file": "node-v24.22.0-linux-x64.tar.xz",
+          "url": "https://nodejs.org/dist/v24.22.0/node-v24.22.0-linux-x64.tar.xz",
+          "sha256": "cc2f601cee82d9a5a233302fe307abc600727035fd7d2c3a3571755989e95008"
+        },
+        {
+          "arch": "arm64",
+          "file": "node-v24.22.0-linux-arm64.tar.xz",
+          "url": "https://nodejs.org/dist/v24.22.0/node-v24.22.0-linux-arm64.tar.xz",
+          "sha256": "fef00bb4d36e1c50104a9775a10359beee98f162b4104dd12472c75065c6a143"
+        }
+      ],
+      "license": {
+        "value": "MIT",
+        "file": "/opt/node/LICENSE",
+        "status": "DECLARED"
+      },
+      "tools": [
+        "node",
+        "node --test",
+        "corepack (bundled, not enabled)"
+      ]
+    },
+    {
+      "id": "npm",
+      "kind": "package-manager",
+      "vendor": "npm, Inc. (GitHub)",
+      "distribution": "bundled with Node.js 24.22.0",
+      "version": "11.19.1",
+      "install_path": "/opt/node/lib/node_modules/npm",
+      "license": {
+        "value": "Artistic-2.0",
+        "file": "/opt/node/lib/node_modules/npm/LICENSE",
+        "status": "DECLARED"
+      },
+      "environment": {
+        "NPM_CONFIG_CACHE": "/var/lib/gordus-node/npm-cache",
+        "NPM_CONFIG_PREFIX": "/var/lib/gordus-node/npm-global",
+        "NPM_CONFIG_OFFLINE": "true",
+        "NPM_CONFIG_IGNORE_SCRIPTS": "true",
+        "NPM_CONFIG_UPDATE_NOTIFIER": "false",
+        "NPM_CONFIG_FUND": "false",
+        "NPM_CONFIG_AUDIT": "false",
+        "NO_UPDATE_NOTIFIER": "1"
+      },
+      "tools": [
+        "npm ci",
+        "npm install",
+        "npx"
+      ]
+    },
+    {
+      "id": "typescript",
+      "kind": "compiler",
+      "vendor": "Microsoft",
+      "distribution": "npm registry via package-lock.json (lockfileVersion 3, sha512 integrity)",
+      "version": "7.0.2",
+      "implementation": "native compiler (Go port), platform binary in @typescript/typescript-linux-x64 / -linux-arm64",
+      "lockfile": "toolchains/node/examples/hola/package-lock.json",
+      "lockfile_version": 3,
+      "integrity": {
+        "node_modules/typescript": "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==",
+        "node_modules/@typescript/typescript-linux-x64": "sha512-EYdf2cNg7rgCWJnxCdJ+F3V39O8ihb37eHAu1LK8oAFizgTQbPOK7zHHXbPt8rX24COqODXeI3sIf0fCXG7H/A==",
+        "node_modules/@typescript/typescript-linux-arm64": "sha512-Qh4eU4/y3yDjnfjjyPYihMj5/ODIlmt+Bzu17OI+fiSRDW57QmU5SiN63exPRNJPKUzcc1INa1NXdrJ+MqHjUQ=="
+      },
+      "install": "npm ci --ignore-scripts (build stage fills the npm cache; final image: npm ci --offline)",
+      "license": {
+        "value": "Apache-2.0",
+        "file": "node_modules/typescript/LICENSE.txt",
+        "status": "DECLARED"
+      },
+      "tools": [
+        "tsc"
+      ]
+    }
+  ],
+  "smoke_test": "toolchains/node/tests/test_node_toolchain.sh",
+  "scope": "Node.js runtime + npm + TypeScript compiler for the example project; no global packages, no network by default"
+}
