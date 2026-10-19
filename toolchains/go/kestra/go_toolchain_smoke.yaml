@@ -1,0 +1,51 @@
+id: go_toolchain_smoke
+namespace: gordus_hub.toolchains
+description: >
+  Fail-closed gate for the isolated Go toolchain (toolchains/go/).
+  The Kestra slim image ships only core plugins and no Go toolchain, so go run /
+  build / vet / test / mod verify run inside the gordus-go Debian 13 image; this flow
+  receives the observed results as inputs and FAILS unless they prove Go 1.27.2 with
+  GOTOOLCHAIN=local. Kept apart from kestra/flows/ and the Java/Mojo toolchain flows.
+inputs:
+  - id: go_version_line
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: hola_output
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: go_env_line
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: test_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: smoke_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+tasks:
+  - id: declare_go_boundary
+    type: io.kestra.plugin.core.log.Log
+    message: >
+      TOOLCHAIN=GO;
+      GO=1.27.2_GO_DEV_DL_SHA256_PINNED_AMD64_ARM64;
+      GOROOT=/opt/go;
+      GOTOOLCHAIN=LOCAL;
+      GOFLAGS=-MOD=READONLY;
+      GOPROXY=OFF;
+      GOTELEMETRY=OFF;
+      CGO=DISABLED;
+      IMAGE_BASE=DEBIAN_13_SLIM;
+      ISOLATED_FROM=AI_PYTHON,SCRIPTS_AI,JAVA_TOOLCHAIN,MOJO_TOOLCHAIN,DEVCONTAINER;
+      LICENSE=BSD-3-CLAUSE;
+      CERTIFICATION=NOT_GRANTED.
+  - id: gate_go_smoke
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ (inputs.go_version_line contains 'go version go1.27.2 ') and (inputs.hola_output contains 'Hola, Gordus-Hub!') and (inputs.go_env_line contains 'GOTOOLCHAIN=local') and (inputs.go_env_line contains 'GOTELEMETRY=off') and (inputs.test_result == 'PASS') and (inputs.smoke_result == 'PASS') }}"
+    then:
+      - id: record_pass
+        type: io.kestra.plugin.core.log.Log
+        message: "GO_TOOLCHAIN_SMOKE=PASS; go='{{ inputs.go_version_line }}'; output='{{ inputs.hola_output }}'; env='{{ inputs.go_env_line }}'"
+    else:
+      - id: fail_closed
+        type: io.kestra.plugin.core.execution.Fail
+        errorMessage: "GO_TOOLCHAIN_SMOKE=BLOCKED: results missing or not Go 1.27.2 local (go='{{ inputs.go_version_line }}', env='{{ inputs.go_env_line }}', smoke='{{ inputs.smoke_result }}')"
