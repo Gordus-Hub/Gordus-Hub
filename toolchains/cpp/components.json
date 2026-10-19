@@ -1,0 +1,136 @@
+{
+  "schema_version": 1,
+  "project": "Gordus-Hub/Gordus-Hub",
+  "toolchain": "cpp",
+  "state": "CPP_TOOLCHAIN_CANDIDATE_NOT_RUNTIME_CERTIFIED",
+  "policy": {
+    "isolation": "separate-image-and-workflow",
+    "isolated_from": [
+      "ai/",
+      "scripts/ai/",
+      "toolchains/java/",
+      "toolchains/mojo/",
+      "toolchains/go/",
+      ".devcontainer/",
+      "kestra/flows/"
+    ],
+    "fail_closed": true,
+    "checksum_required": true,
+    "checksum_mechanism": "apt: signed Debian Release file + per-.deb SHA-256",
+    "mutable_versions_allowed": false,
+    "system_python_allowed": false,
+    "network_tools_allowed": false,
+    "persistent_installation_authorized": false,
+    "certification": "NOT_GRANTED"
+  },
+  "dockerfile": "toolchains/cpp/Dockerfile",
+  "base_image": "debian:13-slim",
+  "language_standard": "C++23 (ISO/IEC 14882:2024), __cplusplus == 202302L",
+  "components": [
+    {
+      "id": "gcc",
+      "kind": "compiler",
+      "vendor": "GNU Project / Debian",
+      "distribution": "debian trixie apt",
+      "upstream_version": "14.2.0",
+      "packages": {"g++-14": "14.2.0-19", "gcc-14": "14.2.0-19", "cpp-14": "14.2.0-19", "libstdc++-14-dev": "14.2.0-19"},
+      "standard_library": "libstdc++ 14",
+      "license": {"value": "GPL-3.0-or-later WITH GCC-exception-3.1", "file": "/usr/share/doc/gcc-14/copyright", "status": "DECLARED"},
+      "commands": ["g++", "gcc", "c++", "cc", "g++-14"]
+    },
+    {
+      "id": "llvm",
+      "kind": "compiler",
+      "vendor": "LLVM Project / Debian",
+      "distribution": "debian trixie apt",
+      "upstream_version": "19.1.7",
+      "packages": {"clang-19": "1:19.1.7-3+b1", "clang-tools-19": "1:19.1.7-3+b1", "clang-format-19": "1:19.1.7-3+b1", "libc++-19-dev": "1:19.1.7-3+b1", "libc++abi-19-dev": "1:19.1.7-3+b1"},
+      "standard_library": "libstdc++ 14 (default) or libc++ 19 (-stdlib=libc++)",
+      "license": {"value": "Apache-2.0 WITH LLVM-exception", "file": "/usr/share/doc/clang-19/copyright", "status": "DECLARED"},
+      "commands": ["clang++", "clang", "clang-scan-deps", "clang-format"]
+    },
+    {
+      "id": "lld",
+      "kind": "linker",
+      "vendor": "LLVM Project / Debian",
+      "distribution": "debian trixie apt",
+      "upstream_version": "19.1.7",
+      "packages": {"lld-19": "1:19.1.7-3+b1"},
+      "license": {"value": "Apache-2.0 WITH LLVM-exception", "file": "/usr/share/doc/lld-19/copyright", "status": "DECLARED"},
+      "commands": ["ld.lld"],
+      "usage": "-fuse-ld=lld (opt-in)"
+    },
+    {
+      "id": "binutils",
+      "kind": "linker",
+      "vendor": "GNU Project / Debian",
+      "distribution": "debian trixie apt",
+      "upstream_version": "2.44",
+      "packages": {"binutils": "2.44-3"},
+      "license": {"value": "GPL-3.0-or-later", "file": "/usr/share/doc/binutils/copyright", "status": "DECLARED"},
+      "commands": ["ld", "as", "ar", "readelf", "objdump", "strip"],
+      "usage": "default linker (GNU ld / bfd)"
+    },
+    {
+      "id": "libc6-dev",
+      "kind": "system-headers",
+      "vendor": "GNU C Library / Debian",
+      "distribution": "debian trixie apt (incl. trixie-security)",
+      "upstream_version": "2.41",
+      "packages": {"libc6-dev": "2.41-12+deb13u4"},
+      "license": {"value": "LGPL-2.1-or-later", "file": "/usr/share/doc/libc6-dev/copyright", "status": "DECLARED"},
+      "commands": []
+    },
+    {
+      "id": "cmake",
+      "kind": "build-tool",
+      "distribution": "debian trixie apt",
+      "upstream_version": "3.31.6",
+      "packages": {"cmake": "3.31.6-2"},
+      "license": {"value": "BSD-3-Clause", "file": "/usr/share/doc/cmake/copyright", "status": "DECLARED"},
+      "commands": ["cmake", "ctest", "cpack"]
+    },
+    {
+      "id": "ninja",
+      "kind": "build-tool",
+      "distribution": "debian trixie apt",
+      "upstream_version": "1.12.1",
+      "packages_by_arch": {"amd64": {"ninja-build": "1.12.1-1"}, "arm64": {"ninja-build": "1.12.1-1+b1"}},
+      "license": {"value": "Apache-2.0", "file": "/usr/share/doc/ninja-build/copyright", "status": "DECLARED"},
+      "commands": ["ninja"]
+    },
+    {
+      "id": "make",
+      "kind": "build-tool",
+      "distribution": "debian trixie apt",
+      "upstream_version": "4.4.1",
+      "packages": {"make": "4.4.1-2"},
+      "license": {"value": "GPL-3.0-or-later", "file": "/usr/share/doc/make/copyright", "status": "DECLARED"},
+      "commands": ["make"]
+    },
+    {
+      "id": "pkg-config",
+      "kind": "build-tool",
+      "distribution": "debian trixie apt",
+      "upstream_version": "1.8.1 (pkgconf)",
+      "packages": {"pkg-config": "1.8.1-4"},
+      "license": {"value": "ISC", "file": "/usr/share/doc/pkgconf/copyright", "status": "DECLARED"},
+      "commands": ["pkg-config"]
+    }
+  ],
+  "excluded": {
+    "gdb": "depends on libpython3 (no Python allowed in the image)",
+    "clang-tidy-19": "depends on python3",
+    "mold": "not needed; GNU ld + LLD cover the use cases",
+    "gold": "deprecated upstream in binutils 2.44; not installed",
+    "apt.llvm.org": "not used; Debian trixie clang-19 is signed and sufficient"
+  },
+  "cxx23_features": {
+    "method": "each feature compiled AND executed inside the image (not only __cpp_lib_* macros)",
+    "g++ 14 + libstdc++": {"print": true, "expected": true, "ranges_zip": true, "ranges_fold": true, "generator": true, "mdspan": false, "flat_map": false, "stacktrace": "yes (-lstdc++exp)", "explicit_this_parameter": true, "import_std": false},
+    "clang++ 19 + libstdc++": {"print": true, "expected": true, "ranges_zip": true, "ranges_fold": true, "generator": true, "mdspan": false, "flat_map": false, "stacktrace": "yes (-lstdc++exp)", "explicit_this_parameter": true, "import_std": false},
+    "clang++ 19 + libc++": {"print": true, "expected": true, "ranges_zip": true, "ranges_fold": true, "generator": false, "mdspan": true, "flat_map": false, "stacktrace": false, "explicit_this_parameter": true, "import_std": true}
+  },
+  "smoke_test": "toolchains/cpp/tests/test_cpp_toolchain.sh",
+  "scope": "C++23 compile/link/build toolchain only; no debugger, no package manager (Conan/vcpkg), no network downloads at build time of user projects"
+}
