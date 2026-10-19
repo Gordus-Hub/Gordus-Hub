@@ -1,0 +1,6 @@
+# Version exacta de Rust para este proyecto. Sin rustup no hay descargas automaticas:
+# tests/test_rust_toolchain.sh comprueba que el rustc instalado coincide con este canal.
+[toolchain]
+channel = "1.99.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
