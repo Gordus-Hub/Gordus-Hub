@@ -1,4 +1,4 @@
-[README.md](https://github.com/user-attachments/files/33644896/README.md)
+README.md (https://github.com/user-attachments/files/33644896/README.md)
 # Toolchain Mojo — Gordus-Hub
 
 Esta carpeta arma un **entorno de Mojo aislado**: una imagen Debian 13 propia, con su
