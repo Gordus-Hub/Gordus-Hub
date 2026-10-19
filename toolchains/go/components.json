@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "project": "Gordus-Hub/Gordus-Hub",
+  "toolchain": "go",
+  "state": "GO_TOOLCHAIN_CANDIDATE_NOT_RUNTIME_CERTIFIED",
+  "policy": {
+    "isolation": "separate-image-and-workflow",
+    "isolated_from": [
+      "ai/",
+      "scripts/ai/",
+      "toolchains/java/",
+      "toolchains/mojo/",
+      ".devcontainer/",
+      "kestra/flows/"
+    ],
+    "fail_closed": true,
+    "checksum_required": true,
+    "mutable_versions_allowed": false,
+    "toolchain_auto_download_allowed": false,
+    "module_downloads_by_default": false,
+    "system_python_allowed": false,
+    "telemetry": "off",
+    "persistent_installation_authorized": false,
+    "certification": "NOT_GRANTED"
+  },
+  "dockerfile": "toolchains/go/Dockerfile",
+  "components": [
+    {
+      "id": "go",
+      "kind": "language-toolchain",
+      "vendor": "The Go Authors (Google)",
+      "distribution": "go.dev/dl official binary",
+      "version": "1.27.2",
+      "go_version": "go1.27.2",
+      "release_date": "2026-10-02",
+      "stable": true,
+      "source": "https://go.dev/dl/",
+      "checksum_source": "https://go.dev/dl/?mode=json",
+      "install_path": "/opt/go",
+      "goroot": "/opt/go",
+      "artifacts": [
+        {
+          "arch": "amd64",
+          "file": "go1.27.2.linux-amd64.tar.gz",
+          "url": "https://go.dev/dl/go1.27.2.linux-amd64.tar.gz",
+          "sha256": "ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045fe5",
+          "size_bytes": 70590635
+        },
+        {
+          "arch": "arm64",
+          "file": "go1.27.2.linux-arm64.tar.gz",
+          "url": "https://go.dev/dl/go1.27.2.linux-arm64.tar.gz",
+          "sha256": "94f3e30b8e374bc285e7dadc11e0865726b9bc6e85b841ccceaabc0214c6b7c8",
+          "size_bytes": 67076180
+        }
+      ],
+      "license": {
+        "value": "BSD-3-Clause",
+        "file": "/opt/go/LICENSE",
+        "status": "DECLARED"
+      },
+      "environment": {
+        "GOROOT": "/opt/go",
+        "GOPATH": "/var/lib/gordus-go/gopath",
+        "GOCACHE": "/var/lib/gordus-go/cache",
+        "GOMODCACHE": "/var/lib/gordus-go/modcache",
+        "GOENV": "/var/lib/gordus-go/env/go.env",
+        "GOTOOLCHAIN": "local",
+        "GOFLAGS": "-mod=readonly",
+        "GOPROXY": "off",
+        "GOSUMDB": "sum.golang.org",
+        "CGO_ENABLED": "0",
+        "GOTELEMETRY": "off (via read-only $HOME/.config/go/telemetry/mode; GOTELEMETRY cannot be set by env)"
+      },
+      "tools": {
+        "compiler": [
+          "go build"
+        ],
+        "runtime": [
+          "go runtime (linked into every binary)",
+          "go run"
+        ],
+        "modules": [
+          "go mod",
+          "go mod verify",
+          "go mod tidy",
+          "go get"
+        ],
+        "development": [
+          "go test",
+          "go vet",
+          "gofmt",
+          "go fmt",
+          "go doc",
+          "go env",
+          "go tool pprof",
+          "go tool cover",
+          "go tool trace"
+        ]
+      },
+      "installation_enabled": true,
+      "smoke_test": "toolchains/go/tests/test_go_toolchain.sh",
+      "scope": "Go compile/run/test/modules toolchain only; CGO disabled (no C compiler in the image); no external module dependencies in examples"
+    }
+  ]
+}
