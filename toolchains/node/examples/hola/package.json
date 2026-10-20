@@ -1,0 +1,19 @@
+{
+  "name": "gordus-hola-node",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ejemplo del toolchain Node.js/TypeScript de Gordus-Hub",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24.22.0 <25"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test test/hola.test.js"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}
