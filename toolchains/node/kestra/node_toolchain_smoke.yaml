@@ -1,0 +1,53 @@
+id: node_toolchain_smoke
+namespace: gordus_hub.toolchains
+description: >
+  Fail-closed gate for the isolated Node.js / TypeScript toolchain (toolchains/node/).
+  The Kestra slim image ships only core plugins and no Node.js toolchain for this project, so
+  node / npm ci / tsc / node --test run inside the gordus-node Debian 13 image; this flow
+  receives the observed results as inputs and FAILS unless they prove Node 24.22.0 LTS,
+  npm 11.19.1 and TypeScript 7.0.2 offline. Kept apart from kestra/flows/ and the other flows.
+inputs:
+  - id: node_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: npm_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: tsc_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: hola_output
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: test_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: smoke_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+tasks:
+  - id: declare_node_boundary
+    type: io.kestra.plugin.core.log.Log
+    message: >
+      TOOLCHAIN=NODE_TS;
+      NODE=24.22.0_LTS_KRYPTON_NODEJS_ORG_SHA256_AND_GPG_PINNED_AMD64_ARM64;
+      NPM=11.19.1_BUNDLED;
+      TYPESCRIPT=7.0.2_PACKAGE_LOCK_SHA512;
+      NPM_OFFLINE=TRUE;
+      INSTALL_SCRIPTS=DISABLED;
+      UPDATE_NOTIFIER=OFF;
+      IMAGE_BASE=DEBIAN_13_SLIM;
+      ISOLATED_FROM=AI_PYTHON,SCRIPTS_AI,JAVA_TOOLCHAIN,MOJO_TOOLCHAIN,GO_TOOLCHAIN,CPP_TOOLCHAIN,RUST_TOOLCHAIN,DEVCONTAINER;
+      LICENSE=MIT,ARTISTIC-2.0,APACHE-2.0;
+      CERTIFICATION=NOT_GRANTED.
+  - id: gate_node_smoke
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ (inputs.node_version == 'node v24.22.0') and (inputs.npm_version == 'npm 11.19.1') and (inputs.tsc_version == 'tsc: Version 7.0.2') and (inputs.hola_output contains 'Hola, Gordus-Hub!') and (inputs.test_result == 'PASS') and (inputs.smoke_result == 'PASS') }}"
+    then:
+      - id: record_pass
+        type: io.kestra.plugin.core.log.Log
+        message: "NODE_TOOLCHAIN_SMOKE=PASS; node='{{ inputs.node_version }}'; npm='{{ inputs.npm_version }}'; tsc='{{ inputs.tsc_version }}'"
+    else:
+      - id: fail_closed
+        type: io.kestra.plugin.core.execution.Fail
+        errorMessage: "NODE_TOOLCHAIN_SMOKE=BLOCKED: results missing or wrong versions (node='{{ inputs.node_version }}', npm='{{ inputs.npm_version }}', tsc='{{ inputs.tsc_version }}', smoke='{{ inputs.smoke_result }}')"
