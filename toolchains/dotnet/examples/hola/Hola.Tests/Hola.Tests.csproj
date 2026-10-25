@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Auto-chequeo sin paquetes externos (xUnit/MSTest/NUnit requieren NuGet.org). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Gordus.Hola.Tests</RootNamespace>
+    <AssemblyName>Hola.Tests</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Hola/Hola.csproj" />
+  </ItemGroup>
+
+</Project>
