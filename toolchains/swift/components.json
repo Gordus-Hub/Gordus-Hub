@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "project": "Gordus-Hub/Gordus-Hub",
+  "toolchain": "swift",
+  "state": "SWIFT_TOOLCHAIN_CANDIDATE_NOT_RUNTIME_CERTIFIED",
+  "policy": {
+    "isolation": "separate-image-and-workflow",
+    "isolated_from": [
+      "ai/",
+      "scripts/ai/",
+      "toolchains/java/",
+      "toolchains/mojo/",
+      "toolchains/go/",
+      "toolchains/cpp/",
+      "toolchains/rust/",
+      "toolchains/node/",
+      "toolchains/dotnet/",
+      ".devcontainer/",
+      "kestra/flows/"
+    ],
+    "fail_closed": true,
+    "checksum_required": true,
+    "signature_required": true,
+    "mutable_versions_allowed": false,
+    "swiftly_allowed": false,
+    "toolchain_auto_download_allowed": false,
+    "package_downloads_by_default": false,
+    "system_python_allowed": false,
+    "network_tools_allowed": false,
+    "lldb_included": false,
+    "persistent_installation_authorized": false,
+    "certification": "NOT_GRANTED"
+  },
+  "dockerfile": "toolchains/swift/Dockerfile",
+  "base_image": "debian:13-slim",
+  "components": [
+    {
+      "id": "swift",
+      "kind": "language-toolchain",
+      "vendor": "Swift.org (swiftlang)",
+      "distribution": "swift.org official Linux tarball for Debian 13 (no swiftly)",
+      "version": "6.4.1",
+      "tag": "swift-6.4.1-RELEASE",
+      "release_date": "2026-10-12",
+      "platform": "debian13",
+      "release_index": "https://www.swift.org/api/v1/install/releases.json",
+      "checksum_source": "sha256 computed by Gordus-Hub over the tarball whose .sig verified with the pinned key (swift.org publishes no .sha256)",
+      "signature": {
+        "key_url": "https://www.swift.org/keys/release-key-swift-6.x.asc",
+        "fingerprint": "52BB7E3DE28A71BE22EC05FFEF80A866B47A981F",
+        "uid": "Swift 6.x Release Signing Key <swift-infrastructure@forums.swift.org>",
+        "verified_with": "gpgv"
+      },
+      "install_path": "/opt/swift", "bin_path": "/opt/swift/usr/bin",
+      "provided_tools": [
+        "swiftc",
+        "swift",
+        "swift-build",
+        "swift-run",
+        "swift-test",
+        "swift-package",
+        "clang",
+        "ld.lld",
+        "swift-format",
+        "sourcekit-lsp",
+        "docc"
+      ],
+      "removed_tools": [
+        "lldb",
+        "lldb-server",
+        "lldb-dap",
+        "lldb-argdumper",
+        "repl_swift",
+        "liblldb.so"
+      ],
+      "removed_reason": "LLDB/REPL require libpython3; the final image ships no Python",
+      "license": {
+        "value": "Apache-2.0 WITH Swift-exception",
+        "text": "Apache License 2.0 with Runtime Library Exception",
+        "url": "https://www.swift.org/legal/license.html"
+      },
+      "environment": {
+        "XDG_CACHE_HOME": "/var/lib/gordus-swift/cache",
+        "CLANG_MODULE_CACHE_PATH": "/var/lib/gordus-swift/module-cache",
+        "GORDUS_SWIFT_OFFLINE": "true"
+      },
+      "artifacts": [
+        {
+          "arch": "amd64",
+          "file": "swift-6.4.1-RELEASE-debian13.tar.gz",
+          "url": "https://download.swift.org/swift-6.4.1-release/debian13/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE-debian13.tar.gz",
+          "sha256": "3273c647a4e29231e1d0962a170f4ba14eca06675591dfe384e7c22b0e476a47",
+          "signature_url": "https://download.swift.org/swift-6.4.1-release/debian13/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE-debian13.tar.gz.sig"
+        },
+        {
+          "arch": "arm64",
+          "file": "swift-6.4.1-RELEASE-debian13-aarch64.tar.gz",
+          "url": "https://download.swift.org/swift-6.4.1-release/debian13-aarch64/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE-debian13-aarch64.tar.gz",
+          "sha256": "bdddd98544ab2b3c569a405d6b377e50945d5b4621f5fa503114af342f55a5cd",
+          "signature_url": "https://download.swift.org/swift-6.4.1-release/debian13-aarch64/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE-debian13-aarch64.tar.gz.sig"
+        }
+      ]
+    },
+    {
+      "id": "system-deps",
+      "kind": "debian-packages",
+      "source": "Debian 13 (trixie) main",
+      "packages": [
+        {
+          "package": "binutils",
+          "version": "2.44-3",
+          "license": "GPL-3.0-or-later"
+        },
+        {
+          "package": "binutils-gold",
+          "version": "2.44-2",
+          "license": "GPL-3.0-or-later"
+        },
+        {
+          "package": "libc6-dev",
+          "version": "2.41-12+deb13u4",
+          "license": "LGPL-2.1-or-later"
+        },
+        {
+          "package": "libgcc-14-dev",
+          "version": "14.2.0-19",
+          "license": "GPL-3.0-or-later WITH GCC-exception-3.1"
+        },
+        {
+          "package": "libstdc++-14-dev",
+          "version": "14.2.0-19",
+          "license": "GPL-3.0-or-later WITH GCC-exception-3.1"
+        },
+        {
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u7",
+          "license": "curl"
+        },
+        {
+          "package": "libxml2",
+          "version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
+          "license": "MIT"
+        },
+        {
+          "package": "libsqlite3-0",
+          "version": "3.46.1-7+deb13u2",
+          "license": "blessing"
+        },
+        {
+          "package": "libedit2",
+          "version": "3.1-20250104-1",
+          "license": "BSD-3-Clause"
+        },
+        {
+          "package": "libncurses6",
+          "version": "6.5+20250216-2",
+          "license": "X11"
+        },
+        {
+          "package": "uuid-dev",
+          "version": "2.41.5-0+deb13u1",
+          "license": "BSD-3-Clause"
+        },
+        {
+          "package": "tzdata",
+          "version": "2026e-0+deb13u1",
+          "license": "public-domain"
+        }
+      ]
+    }
+  ],
+  "smoke_test": "toolchains/swift/tests/test_swift_toolchain.sh"
+}
