@@ -1,0 +1,19 @@
+{
+    "name": "gordus-hub/hola",
+    "description": "Ejemplo minimo de PHP para el toolchain aislado de Gordus-Hub",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.5.12"
+    },
+    "autoload": {
+        "classmap": ["src/"]
+    },
+    "config": {
+        "allow-plugins": false,
+        "secure-http": true,
+        "optimize-autoloader": true,
+        "platform-check": true
+    },
+    "scripts": {}
+}
