@@ -1,0 +1,57 @@
+id: php_toolchain_smoke
+namespace: gordus_hub.toolchains
+description: >
+  Fail-closed gate for the isolated PHP toolchain (toolchains/php/).
+  The Kestra slim image ships only core plugins and no PHP toolchain for this project, so
+  php / composer / phpunit run inside the gordus-php Debian 13 image; this flow receives the
+  observed results as inputs and FAILS unless they prove PHP 8.5.12 (security release that
+  fixes CVE-2026-109618 and CVE-2026-109619), Composer 2.10.3 and PHPUnit 13.4.3 offline.
+  Kept apart from kestra/flows/ and the other flows.
+inputs:
+  - id: php_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: security_patch
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: composer_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: phpunit_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: hola_output
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: test_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: smoke_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+tasks:
+  - id: declare_php_boundary
+    type: io.kestra.plugin.core.log.Log
+    message: >
+      TOOLCHAIN=PHP;
+      PHP=8.5.12_PHP_NET_SOURCE_SHA256_AND_GPG_PINNED_CLI_ONLY_AMD64_ARM64;
+      SECURITY=CVE-2026-109618,CVE-2026-109619_FIXED_MIN_8.5.12;
+      COMPOSER=2.10.3_PHAR_SHA256_AND_GPG_PINNED;
+      PHPUNIT=13.4.3_PHAR_SHA256_AND_GPG_PINNED;
+      COMPOSER_NETWORK=DISABLED;
+      SESSION_UPLOAD_PROGRESS=DISABLED;
+      IMAGE_BASE=DEBIAN_13_SLIM;
+      ISOLATED_FROM=AI_PYTHON,SCRIPTS_AI,JAVA,MOJO,GO,CPP,RUST,NODE,DOTNET,SWIFT,RUBY,DEVCONTAINER;
+      LICENSE=PHP-3.01,MIT,BSD-3-CLAUSE;
+      CERTIFICATION=NOT_GRANTED.
+  - id: gate_php_smoke
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ (inputs.php_version == 'php 8.5.12') and (inputs.security_patch == 'PASS') and (inputs.composer_version == 'composer 2.10.3') and (inputs.phpunit_version == 'phpunit 13.4.3') and (inputs.hola_output contains 'Hola, Gordus-Hub!') and (inputs.test_result == 'PASS') and (inputs.smoke_result == 'PASS') }}"
+    then:
+      - id: record_pass
+        type: io.kestra.plugin.core.log.Log
+        message: "PHP_TOOLCHAIN_SMOKE=PASS; php='{{ inputs.php_version }}'; composer='{{ inputs.composer_version }}'; phpunit='{{ inputs.phpunit_version }}'"
+    else:
+      - id: fail_closed
+        type: io.kestra.plugin.core.execution.Fail
+        errorMessage: "PHP_TOOLCHAIN_SMOKE=BLOCKED: results missing, wrong versions or unpatched PHP (php='{{ inputs.php_version }}', security='{{ inputs.security_patch }}', composer='{{ inputs.composer_version }}', phpunit='{{ inputs.phpunit_version }}', smoke='{{ inputs.smoke_result }}')"
