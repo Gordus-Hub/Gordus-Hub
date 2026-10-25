@@ -1,0 +1,9 @@
+# frozen_string_literal: true
+
+# Solo gemas que ya vienen dentro de Ruby 4.0.9 (bundled gems): se instalan sin red.
+source "https://rubygems.org"
+
+ruby "4.0.9"
+
+gem "minitest", "6.0.0"
+gem "rake", "13.3.1"
