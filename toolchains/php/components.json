@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "project": "Gordus-Hub/Gordus-Hub",
+  "toolchain": "php",
+  "state": "PHP_TOOLCHAIN_CANDIDATE_NOT_RUNTIME_CERTIFIED",
+  "policy": {
+    "isolation": "separate-image-and-workflow",
+    "isolated_from": [
+      "ai/",
+      "scripts/ai/",
+      "toolchains/java/",
+      "toolchains/mojo/",
+      "toolchains/go/",
+      "toolchains/cpp/",
+      "toolchains/rust/",
+      "toolchains/node/",
+      "toolchains/dotnet/",
+      "toolchains/swift/",
+      "toolchains/ruby/",
+      ".devcontainer/",
+      "kestra/flows/"
+    ],
+    "fail_closed": true,
+    "checksum_required": true,
+    "signature_required": true,
+    "mutable_versions_allowed": false,
+    "lockfile_required": true,
+    "composer_plugins_allowed": false,
+    "package_downloads_by_default": false,
+    "telemetry": "none (PHP and Composer have no telemetry; composer audit disabled offline)",
+    "sapi": "cli-only (no php-cgi, php-fpm, mod_php or phpdbg)",
+    "system_python_allowed": false,
+    "network_tools_allowed": false,
+    "persistent_installation_authorized": false,
+    "certification": "NOT_GRANTED"
+  },
+  "security": {
+    "php_minimum_patched": {
+      "8.5": "8.5.12",
+      "8.4": "8.4.27",
+      "8.3": "8.3.36",
+      "8.2": "8.2.35"
+    },
+    "fixes": [
+      {
+        "id": "CVE-2026-109618",
+        "ghsa": "GHSA-w8hw-w9fx-j79w",
+        "summary": "RCE via OOM corruption (unauthenticated remote code execution)",
+        "cvss_v4": "9.2"
+      },
+      {
+        "id": "CVE-2026-109619",
+        "ghsa": "GHSA-6wmf-4rv5-p3rp",
+        "summary": "RCE via stale global state (unauthenticated remote code execution)",
+        "cvss_v4": "9.2"
+      }
+    ],
+    "advisory": "https://www.php.net/ (Security advisory, 21 Oct 2026)",
+    "advisory_date": "2026-10-21",
+    "pending_upstream": {
+      "id": "CVE-2026-115560",
+      "summary": "Informational advisory 23 Oct 2026: unlikely RCE vector in session upload progress; fix in next regular release",
+      "mitigation": "session.upload_progress.enabled=0"
+    },
+    "ini_mitigations": {
+      "session.upload_progress.enabled": "0",
+      "fatal_error_backtraces": "0",
+      "expose_php": "Off",
+      "allow_url_include": "Off"
+    },
+    "composer_minimum_patched": "2.10.3",
+    "phpunit_vulnerable_versions": ["12.5.21", "13.1.5"]
+  },
+  "dockerfile": "toolchains/php/Dockerfile",
+  "base_image": "debian:13-slim",
+  "components": [
+    {
+      "id": "php",
+      "kind": "interpreter",
+      "vendor": "The PHP Group",
+      "distribution": "php.net official source tarball, built in-image (CLI only)",
+      "version": "8.5.12",
+      "release_date": "2026-10-21",
+      "source": "https://www.php.net/distributions/php-8.5.12.tar.xz",
+      "checksum_source": "https://www.php.net/releases/index.php?json&version=8.5.12",
+      "sha256": "08bc2eba2a588654ade1357174aa646b761556c862dda0678345ee29ed481209",
+      "signature": {
+        "file": "https://www.php.net/distributions/php-8.5.12.tar.xz.asc",
+        "keyring": "https://www.php.net/distributions/php-keyring.gpg",
+        "key_file": "toolchains/php/keys/php-release-manager-daniel-scherzer.asc",
+        "key_list": "https://www.php.net/gpg-keys.php",
+        "fingerprint": "D95C03BC702BE9515344AE3374E44BC9067701A5",
+        "signer": "Daniel Scherzer (for PHP) <daniels@php.net>, PHP 8.5 release manager",
+        "verified_with": "gpgv"
+      },
+      "install_path": "/opt/php",
+      "configure": [
+        "--disable-cgi",
+        "--disable-phpdbg",
+        "--without-pear",
+        "--without-sqlite3",
+        "--without-pdo-sqlite",
+        "--enable-mbstring",
+        "--with-openssl",
+        "--with-zlib"
+      ],
+      "license": {
+        "value": "PHP-3.01",
+        "file": "LICENSE (php-src)",
+        "status": "DECLARED"
+      },
+      "tools": [
+        "php",
+        "php -l",
+        "phar"
+      ]
+    },
+    {
+      "id": "composer",
+      "kind": "package-manager",
+      "vendor": "Composer (Nils Adermann, Jordi Boggiano)",
+      "distribution": "getcomposer.org official PHAR",
+      "version": "2.10.3",
+      "source": "https://getcomposer.org/download/2.10.3/composer.phar",
+      "sha256": "7a2d379d5b8ffdaa028580ef26494c36d2feef4b178d3dd1473a4dbc5e17c8d6",
+      "signature": {
+        "file": "https://getcomposer.org/download/2.10.3/composer.phar.asc",
+        "key_source": "https://keys.openpgp.org/vks/v1/by-fingerprint/161DFBE342889F01DDAC4E61CBB3D576F2A0946F",
+        "key_file": "toolchains/php/keys/composer-packagist.asc",
+        "fingerprint": "161DFBE342889F01DDAC4E61CBB3D576F2A0946F",
+        "signer": "Packagist Conductors <contact@packagist.com>",
+        "verified_with": "gpgv"
+      },
+      "install_path": "/opt/php/bin/composer",
+      "license": {
+        "value": "MIT",
+        "status": "DECLARED"
+      },
+      "environment": {
+        "COMPOSER_HOME": "/var/lib/gordus-php/composer",
+        "COMPOSER_CACHE_DIR": "/var/lib/gordus-php/composer-cache",
+        "COMPOSER_DISABLE_NETWORK": "1",
+        "COMPOSER_NO_AUDIT": "1",
+        "COMPOSER_NO_INTERACTION": "1",
+        "COMPOSER_ALLOW_SUPERUSER": "0"
+      },
+      "tools": [
+        "composer validate",
+        "composer install",
+        "composer dump-autoload"
+      ]
+    },
+    {
+      "id": "phpunit",
+      "kind": "test-framework",
+      "vendor": "Sebastian Bergmann",
+      "distribution": "phar.phpunit.de official PHAR",
+      "version": "13.4.3",
+      "source": "https://phar.phpunit.de/phpunit-13.4.3.phar",
+      "sha256": "f9f8f986f2b6e862187a04619eb01b5960cea77bb39bd1e38d3e396a99eae516",
+      "signature": {
+        "file": "https://phar.phpunit.de/phpunit-13.4.3.phar.asc",
+        "key_source": "https://keys.openpgp.org/vks/v1/by-fingerprint/D8406D0D82947747293778314AA394086372C20A",
+        "key_file": "toolchains/php/keys/phpunit-sebastian-bergmann.asc",
+        "fingerprint": "D8406D0D82947747293778314AA394086372C20A",
+        "signer": "Sebastian Bergmann <sb@sebastian-bergmann.de>",
+        "verified_with": "gpgv"
+      },
+      "install_path": "/opt/php/bin/phpunit",
+      "license": {
+        "value": "BSD-3-Clause",
+        "status": "DECLARED"
+      },
+      "tools": [
+        "phpunit"
+      ]
+    }
+  ],
+  "runtime_packages": {
+    "ca-certificates": "20250419+deb13u1",
+    "libonig5": "6.9.9-1+b1",
+    "libssl3t64": "3.5.7-1~deb13u3",
+    "libxml2": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
+    "zlib1g": "1:1.3.dfsg+really1.3.1-1+b1"
+  },
+  "architectures": ["amd64", "arm64"],
+  "image": {
+    "user": "phpuser",
+    "code_dir": "/opt/gordus-php (read-only)",
+    "work_dir": "/workspace",
+    "state_dir": "/var/lib/gordus-php/"
+  },
+  "kestra": {
+    "flow": "toolchains/php/kestra/php_toolchain_smoke.yaml",
+    "namespace": "gordus_hub.toolchains",
+    "engine": "kestra/kestra:v1.3.40-slim"
+  },
+  "workflow": ".github/workflows/php-toolchain.yml"
+}
