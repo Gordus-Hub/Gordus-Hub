@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>Gordus.Hola</RootNamespace>
-    <AssemblyName>Hola</AssemblyName>
-  </PropertyGroup>
-
-</Project>
