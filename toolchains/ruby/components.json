@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "project": "Gordus-Hub/Gordus-Hub",
+  "toolchain": "ruby",
+  "state": "RUBY_TOOLCHAIN_CANDIDATE_NOT_RUNTIME_CERTIFIED",
+  "policy": {
+    "isolation": "separate-image-and-workflow",
+    "isolated_from": [
+      "ai/",
+      "scripts/ai/",
+      "toolchains/java/",
+      "toolchains/mojo/",
+      "toolchains/go/",
+      "toolchains/cpp/",
+      "toolchains/rust/",
+      "toolchains/node/",
+      "toolchains/dotnet/",
+      "toolchains/swift/",
+      "toolchains/kotlin/",
+      "toolchains/scala/",
+      ".devcontainer/",
+      "kestra/flows/"
+    ],
+    "fail_closed": true,
+    "checksum_required": true,
+    "signature_required": false,
+    "signature_note": "ruby-lang.org does not publish GPG signatures for release tarballs; SHA-256 (release announcement) and SHA-512 (official index.txt) are both pinned instead",
+    "mutable_versions_allowed": false,
+    "lockfile_required": true,
+    "lockfile_checksums_required": true,
+    "package_downloads_by_default": false,
+    "telemetry": "none (Ruby, RubyGems and Bundler have no telemetry)",
+    "system_python_allowed": false,
+    "network_tools_allowed": false,
+    "persistent_installation_authorized": false,
+    "certification": "NOT_GRANTED"
+  },
+  "dockerfile": "toolchains/ruby/Dockerfile",
+  "base_image": "debian:13-slim",
+  "components": [
+    {
+      "id": "ruby",
+      "kind": "interpreter",
+      "vendor": "Ruby core team (ruby-lang.org)",
+      "distribution": "cache.ruby-lang.org official source tarball, built in-image",
+      "version": "4.0.9",
+      "release_date": "2026-10-23",
+      "source": "https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.9.tar.xz",
+      "announcement": "https://www.ruby-lang.org/en/news/2026/10/23/ruby-4-0-9-released/",
+      "checksum_source": "https://cache.ruby-lang.org/pub/ruby/index.txt",
+      "sha256": "a8057adb39f51ad6dc3106237504c93dd792bb515837b4fe7817ae21ed7e51f4",
+      "sha512": "7160b1c6fb61b0e369cddccb29eadae85390d86777c875efc18a56de390b1fe1ff47d6e37ccaf39d2ed477c9811f1224cbb3d2f54a0cbd5d5daf418b1cf2557e",
+      "install_path": "/opt/ruby",
+      "license": {
+        "value": "Ruby OR BSD-2-Clause",
+        "file": "COPYING (ruby source)",
+        "status": "DECLARED"
+      },
+      "tools": [
+        "ruby",
+        "ruby -c",
+        "irb"
+      ]
+    },
+    {
+      "id": "rubygems",
+      "kind": "package-manager",
+      "distribution": "bundled with Ruby 4.0.9",
+      "version": "4.0.20",
+      "license": {
+        "value": "Ruby OR MIT",
+        "status": "DECLARED"
+      },
+      "environment": {
+        "GEM_HOME": "/var/lib/gordus-ruby/gems",
+        "GEM_PATH": "/var/lib/gordus-ruby/gems:/opt/ruby/lib/ruby/gems/4.0.0"
+      },
+      "tools": [
+        "gem"
+      ]
+    },
+    {
+      "id": "bundler",
+      "kind": "dependency-manager",
+      "distribution": "bundled with Ruby 4.0.9 (default gem)",
+      "version": "4.0.20",
+      "license": {
+        "value": "MIT",
+        "status": "DECLARED"
+      },
+      "environment": {
+        "BUNDLE_USER_HOME": "/var/lib/gordus-ruby/bundle",
+        "BUNDLE_FROZEN": "true",
+        "BUNDLE_DISABLE_VERSION_CHECK": "true",
+        "BUNDLE_IGNORE_FUNDING_REQUESTS": "true"
+      },
+      "tools": [
+        "bundle install --local",
+        "bundle exec"
+      ]
+    },
+    {
+      "id": "minitest",
+      "kind": "test-framework",
+      "distribution": "bundled gem shipped inside the Ruby 4.0.9 tarball",
+      "version": "6.0.0",
+      "gem_sha256": "4ca597fc1d735ea18d2b4b98c5fb1d5a6da4a6f35ddf32bd5fa3eded33a453be",
+      "license": {
+        "value": "MIT",
+        "status": "DECLARED"
+      },
+      "tools": [
+        "minitest/autorun"
+      ]
+    },
+    {
+      "id": "rake",
+      "kind": "build-tool",
+      "distribution": "bundled gem shipped inside the Ruby 4.0.9 tarball",
+      "version": "13.3.1",
+      "gem_sha256": "8c9e89d09f66a26a01264e7e3480ec0607f0c497a861ef16063604b1b08eb19c",
+      "license": {
+        "value": "MIT",
+        "status": "DECLARED"
+      },
+      "tools": [
+        "rake test"
+      ]
+    }
+  ],
+  "lockfile_checksums": {
+    "minitest (6.0.0)": "sha256=4ca597fc1d735ea18d2b4b98c5fb1d5a6da4a6f35ddf32bd5fa3eded33a453be",
+    "prism (1.8.2)": "sha256=de088096c9a0e1f298edf2b2a84740ed54d56b5d60b88536f40831599d1116ef",
+    "rake (13.3.1)": "sha256=8c9e89d09f66a26a01264e7e3480ec0607f0c497a861ef16063604b1b08eb19c"
+  },
+  "runtime_packages": {
+    "ca-certificates": "20250419+deb13u1",
+    "libffi8": "3.4.8-2",
+    "libssl3t64": "3.5.7-1~deb13u3",
+    "libyaml-0-2": "0.2.5-2",
+    "zlib1g": "1:1.3.dfsg+really1.3.1-1+b1"
+  },
+  "architectures": ["amd64", "arm64"],
+  "image": {
+    "user": "rubyuser",
+    "code_dir": "/opt/gordus-ruby (read-only)",
+    "work_dir": "/workspace",
+    "state_dir": "/var/lib/gordus-ruby/"
+  },
+  "kestra": {
+    "flow": "toolchains/ruby/kestra/ruby_toolchain_smoke.yaml",
+    "namespace": "gordus_hub.toolchains",
+    "engine": "kestra/kestra:v1.3.40-slim"
+  },
+  "workflow": ".github/workflows/ruby-toolchain.yml"
+}
