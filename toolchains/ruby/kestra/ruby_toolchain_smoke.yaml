@@ -1,0 +1,56 @@
+id: ruby_toolchain_smoke
+namespace: gordus_hub.toolchains
+description: >
+  Fail-closed gate for the isolated Ruby toolchain (toolchains/ruby/).
+  The Kestra slim image ships only core plugins and no Ruby toolchain for this project, so
+  ruby / bundle / minitest run inside the gordus-ruby Debian 13 image; this flow receives the
+  observed results as inputs and FAILS unless they prove Ruby 4.0.9, RubyGems 4.0.20,
+  Bundler 4.0.20 and Minitest 6.0.0 offline. Kept apart from kestra/flows/ and the other flows.
+inputs:
+  - id: ruby_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: gem_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: bundler_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: minitest_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: hola_output
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: test_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: smoke_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+tasks:
+  - id: declare_ruby_boundary
+    type: io.kestra.plugin.core.log.Log
+    message: >
+      TOOLCHAIN=RUBY;
+      RUBY=4.0.9_RUBY_LANG_SOURCE_SHA256_AND_SHA512_PINNED_AMD64_ARM64;
+      RUBYGEMS=4.0.20_BUNDLED;
+      BUNDLER=4.0.20_BUNDLED_FROZEN_LOCKFILE_WITH_CHECKSUMS;
+      MINITEST=6.0.0_BUNDLED_GEM;
+      RAKE=13.3.1_BUNDLED_GEM;
+      GEM_NETWORK=OFF_BY_DEFAULT;
+      IMAGE_BASE=DEBIAN_13_SLIM;
+      ISOLATED_FROM=AI_PYTHON,SCRIPTS_AI,JAVA,MOJO,GO,CPP,RUST,NODE,DOTNET,SWIFT,KOTLIN,SCALA,DEVCONTAINER;
+      LICENSE=RUBY_OR_BSD-2-CLAUSE,MIT;
+      CERTIFICATION=NOT_GRANTED.
+  - id: gate_ruby_smoke
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ (inputs.ruby_version == 'ruby 4.0.9') and (inputs.gem_version == 'gem 4.0.20') and (inputs.bundler_version == 'bundler 4.0.20') and (inputs.minitest_version == 'minitest 6.0.0') and (inputs.hola_output contains 'Hola, Gordus-Hub!') and (inputs.test_result == 'PASS') and (inputs.smoke_result == 'PASS') }}"
+    then:
+      - id: record_pass
+        type: io.kestra.plugin.core.log.Log
+        message: "RUBY_TOOLCHAIN_SMOKE=PASS; ruby='{{ inputs.ruby_version }}'; bundler='{{ inputs.bundler_version }}'; minitest='{{ inputs.minitest_version }}'"
+    else:
+      - id: fail_closed
+        type: io.kestra.plugin.core.execution.Fail
+        errorMessage: "RUBY_TOOLCHAIN_SMOKE=BLOCKED: results missing or wrong versions (ruby='{{ inputs.ruby_version }}', gem='{{ inputs.gem_version }}', bundler='{{ inputs.bundler_version }}', minitest='{{ inputs.minitest_version }}', smoke='{{ inputs.smoke_result }}')"
