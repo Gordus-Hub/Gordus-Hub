@@ -1,0 +1,56 @@
+id: r_toolchain_smoke
+namespace: gordus_hub.toolchains
+description: >
+  Fail-closed gate for the isolated R toolchain (toolchains/r/).
+  The Kestra slim image ships only core plugins and no R toolchain for this project, so
+  Rscript / install.packages / renv / testthat run inside the gordus-r Debian 13 image; this flow
+  receives the observed results as inputs and FAILS unless they prove R 4.6.1, testthat 3.3.2
+  and renv 1.3.1 offline. Kept apart from kestra/flows/ and the other flows.
+inputs:
+  - id: r_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: testthat_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: renv_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: hola_output
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: offline_install
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: test_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: smoke_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+tasks:
+  - id: declare_r_boundary
+    type: io.kestra.plugin.core.log.Log
+    message: >
+      TOOLCHAIN=R;
+      R=4.6.1_CRAN_SOURCE_SHA256_AND_SHA512_PINNED_AMD64_ARM64;
+      PACKAGE_MANAGER=INSTALL_PACKAGES_LOCAL_REPO_ONLY;
+      RENV=1.3.1_CRAN_SOURCE_SHA256_PINNED;
+      TESTTHAT=3.3.2_CRAN_SOURCE_SHA256_PINNED;
+      PACKAGE_NETWORK=OFF_BY_DEFAULT;
+      SECURITY=CVE-2024-27322_FIXED_MIN_4.4.0;
+      IMAGE_BASE=DEBIAN_13_SLIM;
+      ISOLATED_FROM=AI_PYTHON,SCRIPTS_AI,JAVA,MOJO,GO,CPP,RUST,NODE,DOTNET,SWIFT,KOTLIN,SCALA,PHP,RUBY,DEVCONTAINER;
+      LICENSE=GPL-2.0-OR-LATER,MIT;
+      CERTIFICATION=NOT_GRANTED.
+  - id: gate_r_smoke
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ (inputs.r_version == 'R 4.6.1') and (inputs.testthat_version == 'testthat 3.3.2') and (inputs.renv_version == 'renv 1.3.1') and (inputs.hola_output contains 'Hola, Gordus-Hub!') and (inputs.offline_install == 'PASS') and (inputs.test_result == 'PASS') and (inputs.smoke_result == 'PASS') }}"
+    then:
+      - id: record_pass
+        type: io.kestra.plugin.core.log.Log
+        message: "R_TOOLCHAIN_SMOKE=PASS; r='{{ inputs.r_version }}'; testthat='{{ inputs.testthat_version }}'; renv='{{ inputs.renv_version }}'"
+    else:
+      - id: fail_closed
+        type: io.kestra.plugin.core.execution.Fail
+        errorMessage: "R_TOOLCHAIN_SMOKE=BLOCKED: results missing or wrong versions (r='{{ inputs.r_version }}', testthat='{{ inputs.testthat_version }}', renv='{{ inputs.renv_version }}', offline='{{ inputs.offline_install }}', smoke='{{ inputs.smoke_result }}')"
