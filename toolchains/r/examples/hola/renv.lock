@@ -1,0 +1,20 @@
+{
+  "R": {
+    "Version": "4.6.1",
+    "Repositories": [
+      {
+        "Name": "GORDUS",
+        "URL": "file:///opt/gordus-r/repo"
+      }
+    ]
+  },
+  "Packages": {
+    "praise": {
+      "Package": "praise",
+      "Version": "1.0.0",
+      "Source": "Repository",
+      "Repository": "GORDUS",
+      "Hash": "a555924add98c99d2f411e37e7d25e9f"
+    }
+  }
+}
