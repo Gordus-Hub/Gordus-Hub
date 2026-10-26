@@ -1,0 +1,8 @@
+# Gordus-Hub - configuracion de R (solo lectura). Sin red por defecto:
+# install.packages() usa SOLO el repositorio local fijado dentro de la imagen.
+local({
+  options(repos = c(GORDUS = "file:///opt/gordus-r/repo"),
+          pkgType = "source",
+          renv.config.updates.check = FALSE,
+          renv.consent = TRUE)
+})
