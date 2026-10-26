@@ -1,1 +1,7 @@
+# PDF translation for gordus_ai.pdf_translate (python3 -m gordus_ai.pdf_translate entrada.pdf salida.txt).
+# pypdf only extracts the text layer of each page; translation goes through the governed Argos adapter
+# (ai/translation/pairs.json), so argos-translate.txt must also be installed. Output is plain UTF-8 text
+# with one "--- Página N ---" block per page; layout and images are not kept. Scanned PDFs without a
+# text layer are rejected (exit 2, NO_EXTRACTABLE_TEXT). If pypdf is missing the tool blocks (exit 3,
+# PDF_DEPENDENCY_MISSING). Defaults: --source en --target es.
 pypdf==6.20.1
