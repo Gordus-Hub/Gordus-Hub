@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "project": "Gordus-Hub/Gordus-Hub",
+  "toolchain": "julia",
+  "state": "JULIA_TOOLCHAIN_CANDIDATE_NOT_RUNTIME_CERTIFIED",
+  "policy": {
+    "isolation": "separate-image-and-workflow",
+    "isolated_from": [
+      "ai/",
+      "scripts/ai/",
+      "toolchains/java/",
+      "toolchains/mojo/",
+      "toolchains/go/",
+      "toolchains/cpp/",
+      "toolchains/rust/",
+      "toolchains/node/",
+      "toolchains/dotnet/",
+      "toolchains/swift/",
+      "toolchains/kotlin/",
+      "toolchains/scala/",
+      "toolchains/php/",
+      "toolchains/ruby/",
+      ".devcontainer/",
+      "kestra/flows/"
+    ],
+    "fail_closed": true,
+    "checksum_required": true,
+    "signature_required": true,
+    "mutable_versions_allowed": false,
+    "lockfile_required": true,
+    "package_downloads_by_default": false,
+    "third_party_packages": false,
+    "telemetry": "none (JULIA_PKG_SERVER empty and JULIA_PKG_OFFLINE=true: Pkg never contacts pkg.julialang.org)",
+    "system_python_allowed": false,
+    "network_tools_allowed": false,
+    "persistent_installation_authorized": false,
+    "certification": "NOT_GRANTED"
+  },
+  "security": {
+    "julia_minimum_patched": "1.13.2",
+    "release_date": "2026-10-15",
+    "bundled_updates": {
+      "OpenSSL_jll": "3.5.8",
+      "LibCURL_jll": "8.22.0",
+      "LibGit2_jll": "1.9.7",
+      "nghttp2_jll": "1.70.0",
+      "Zlib_jll": "1.3.2"
+    },
+    "advisories": "https://security.julialang.org/advisories/",
+    "release_notes": "https://github.com/JuliaLang/julia/releases/tag/v1.13.2",
+    "examples": ["GHSA-9r76-qj98-jfhc (LibCURL_jll)", "GHSA-wvhq-3h88-rf6g (OpenSSL_jll)"]
+  },
+  "dockerfile": "toolchains/julia/Dockerfile",
+  "base_image": "debian:13-slim",
+  "components": [
+    {
+      "id": "julia",
+      "kind": "compiler-runtime",
+      "vendor": "The Julia Project (JuliaLang)",
+      "distribution": "julialang.org official generic Linux binaries (glibc)",
+      "version": "1.13.2",
+      "release_date": "2026-10-15",
+      "checksum_source": "https://julialang-s3.julialang.org/bin/versions.json",
+      "artifacts": {
+        "amd64": {
+          "source": "https://julialang-s3.julialang.org/bin/linux/x64/1.13/julia-1.13.2-linux-x86_64.tar.gz",
+          "sha256": "2ecdfc9890ab0a565fdd92404c915ba2a04a933dbd5d292cc224d13819d17d07"
+        },
+        "arm64": {
+          "source": "https://julialang-s3.julialang.org/bin/linux/aarch64/1.13/julia-1.13.2-linux-aarch64.tar.gz",
+          "sha256": "b366ac62162d42b272e82436397487dec719f0830d059cdd8a3f7a1810647128"
+        }
+      },
+      "signature": {
+        "file": "<source>.asc",
+        "key_source": "https://julialang.org/assets/juliareleases.asc",
+        "key_file": "toolchains/julia/keys/julia-release-signing-key.asc",
+        "fingerprint": "64B779A570972FFF7BFC2B54EAD471E1A1F2C10A",
+        "signer": "Julia Release Signing Key <buildbot@julialang.org>",
+        "verified_with": "gpgv"
+      },
+      "install_path": "/opt/julia",
+      "license": {
+        "value": "MIT",
+        "file": "LICENSE.md (/opt/julia/share/doc/julia)",
+        "status": "DECLARED"
+      },
+      "tools": [
+        "julia",
+        "julia --project"
+      ]
+    },
+    {
+      "id": "pkg",
+      "kind": "package-manager",
+      "vendor": "The Julia Project (JuliaLang)",
+      "distribution": "Julia standard library (bundled with julia 1.13.2)",
+      "version": "1.13.0",
+      "install_path": "/opt/julia/share/julia/stdlib/v1.13/Pkg",
+      "license": {
+        "value": "MIT",
+        "status": "DECLARED"
+      },
+      "environment": {
+        "JULIA_DEPOT_PATH": "/var/lib/gordus-julia/depot:",
+        "JULIA_PKG_OFFLINE": "true",
+        "JULIA_PKG_SERVER": "",
+        "JULIA_PKG_PRECOMPILE_AUTO": "0"
+      },
+      "tools": [
+        "Pkg.instantiate",
+        "Pkg.status",
+        "Pkg.test"
+      ]
+    },
+    {
+      "id": "test",
+      "kind": "test-framework",
+      "vendor": "The Julia Project (JuliaLang)",
+      "distribution": "Julia standard library Test (bundled with julia 1.13.2)",
+      "version": "1.11.0",
+      "install_path": "/opt/julia/share/julia/stdlib/v1.13/Test",
+      "license": {
+        "value": "MIT",
+        "status": "DECLARED"
+      },
+      "tools": [
+        "@testset",
+        "@test"
+      ]
+    }
+  ],
+  "runtime_packages": {
+    "ca-certificates": "20250419+deb13u1"
+  },
+  "architectures": ["amd64", "arm64"],
+  "image": {
+    "user": "juliauser",
+    "code_dir": "/opt/gordus-julia (read-only)",
+    "work_dir": "/workspace",
+    "state_dir": "/var/lib/gordus-julia/"
+  },
+  "kestra": {
+    "flow": "toolchains/julia/kestra/julia_toolchain_smoke.yaml",
+    "namespace": "gordus_hub.toolchains",
+    "engine": "kestra/kestra:v1.3.40-slim"
+  },
+  "workflow": ".github/workflows/julia-toolchain.yml"
+}
