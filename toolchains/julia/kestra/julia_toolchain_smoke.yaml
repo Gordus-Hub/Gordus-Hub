@@ -1,0 +1,53 @@
+id: julia_toolchain_smoke
+namespace: gordus_hub.toolchains
+description: >
+  Fail-closed gate for the isolated Julia toolchain (toolchains/julia/).
+  The Kestra slim image ships only core plugins and no Julia toolchain for this project, so
+  julia / Pkg / Test run inside the gordus-julia Debian 13 image; this flow receives the
+  observed results as inputs and FAILS unless they prove Julia 1.13.2 (release with the
+  OpenSSL/LibCURL/LibGit2/nghttp2/Zlib security updates), Pkg 1.13.0 offline and Test passing.
+  Kept apart from kestra/flows/ and the other flows.
+inputs:
+  - id: julia_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: security_patch
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: pkg_version
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: hola_output
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: test_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+  - id: smoke_result
+    type: STRING
+    defaults: "NOT_PROVIDED"
+tasks:
+  - id: declare_julia_boundary
+    type: io.kestra.plugin.core.log.Log
+    message: >
+      TOOLCHAIN=JULIA;
+      JULIA=1.13.2_JULIALANG_OFFICIAL_BINARY_SHA256_AND_GPG_PINNED_AMD64_ARM64;
+      SECURITY=OPENSSL_JLL_3.5.8,LIBCURL_JLL_8.22.0,LIBGIT2_JLL_1.9.7_MIN_1.13.2;
+      PKG=1.13.0_STDLIB_OFFLINE;
+      TEST=STDLIB;
+      PKG_NETWORK=DISABLED;
+      IMAGE_BASE=DEBIAN_13_SLIM;
+      ISOLATED_FROM=AI_PYTHON,SCRIPTS_AI,JAVA,MOJO,GO,CPP,RUST,NODE,DOTNET,SWIFT,KOTLIN,SCALA,PHP,RUBY,DEVCONTAINER;
+      LICENSE=MIT;
+      CERTIFICATION=NOT_GRANTED.
+  - id: gate_julia_smoke
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ (inputs.julia_version == 'julia 1.13.2') and (inputs.security_patch == 'PASS') and (inputs.pkg_version == 'pkg 1.13.0') and (inputs.hola_output contains 'Hola, Gordus-Hub!') and (inputs.test_result == 'PASS') and (inputs.smoke_result == 'PASS') }}"
+    then:
+      - id: record_pass
+        type: io.kestra.plugin.core.log.Log
+        message: "JULIA_TOOLCHAIN_SMOKE=PASS; julia='{{ inputs.julia_version }}'; pkg='{{ inputs.pkg_version }}'"
+    else:
+      - id: fail_closed
+        type: io.kestra.plugin.core.execution.Fail
+        errorMessage: "JULIA_TOOLCHAIN_SMOKE=BLOCKED: results missing, wrong versions or unpatched Julia (julia='{{ inputs.julia_version }}', security='{{ inputs.security_patch }}', pkg='{{ inputs.pkg_version }}', smoke='{{ inputs.smoke_result }}')"
